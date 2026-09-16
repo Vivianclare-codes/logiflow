@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { CustomerForm } from "@/components/customers/customer-form";
+import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
 
 export default async function CustomersPage() {
   const supabase = await createClient();
@@ -63,6 +64,10 @@ export default async function CustomersPage() {
     >
     Edit
     </Link>
+    <div className="mt-3">
+  <DeleteCustomerButton customerId={customer.id} />
+</div>
+
         </div>
       </div>
     ))}

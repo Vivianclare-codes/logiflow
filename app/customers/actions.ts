@@ -100,3 +100,38 @@ export async function updateCustomer(
 
   return { success: true };
 }
+
+export async function deleteCustomer(
+  previousState: CustomerActionState,
+  formData: FormData
+): Promise<CustomerActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+
+  if (!id) {
+    return { error: "Customer ID is required." };
+  }
+
+  const { error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Delete customer error:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/customers");
+
+  return { success: true };
+}
