@@ -1,27 +1,38 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase/client";
+export default async function DashboardPage() {
+  const supabase = await createClient();
 
-export default function DashboardPage() {
-  const router = useRouter();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error("Profile fetch error:", error);
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-2">
       <h1 className="text-3xl font-bold">
         Welcome to LogiFlow
       </h1>
 
-      <Button onClick={handleLogout} variant="outline">
-        Log out
-      </Button>
+      <p>{profile?.full_name}</p>
+      <p className="capitalize text-muted-foreground">
+        {profile?.role}
+      </p>
     </main>
   );
 }
