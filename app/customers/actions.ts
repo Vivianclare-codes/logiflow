@@ -52,3 +52,51 @@ export async function createCustomer(
 
   return { success: true };
 }
+
+export async function updateCustomer(
+  previousState: CustomerActionState,
+  formData: FormData
+): Promise<CustomerActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+
+  if (!id) {
+    return { error: "Customer ID is required." };
+  }
+
+  if (!name || !phone) {
+    return { error: "Name and phone are required." };
+  }
+
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      name,
+      phone,
+      email: email || null,
+      address: address || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Update customer error:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/customers");
+
+  return { success: true };
+}
