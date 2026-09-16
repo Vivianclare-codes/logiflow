@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createClient } from "@/lib/supabase/server";
 import { CustomerForm } from "@/components/customers/customer-form";
 
@@ -54,6 +56,13 @@ export default async function CustomersPage() {
             Added:{" "}
             {new Date(customer.created_at).toLocaleDateString()}
           </p>
+
+            <Link
+    href={`/customers/${customer.id}/edit`}
+    className="mt-3 inline-block text-sm font-medium underline"
+    >
+    Edit
+    </Link>
         </div>
       </div>
     ))}
