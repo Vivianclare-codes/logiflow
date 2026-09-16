@@ -20,7 +20,18 @@ export function DeleteCustomerButton({
 
   return (
     <div>
-      <form action={formAction}>
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          const confirmed = window.confirm(
+            "Are you sure you want to delete this customer?"
+          );
+
+          if (!confirmed) {
+            event.preventDefault();
+          }
+        }}
+      >
         <input
           type="hidden"
           name="id"
@@ -44,4 +55,3 @@ export function DeleteCustomerButton({
     </div>
   );
 }
-

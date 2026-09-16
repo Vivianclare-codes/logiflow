@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
+import { CustomerList } from "@/components/customers/customer-list";
 
 export default async function CustomersPage() {
   const supabase = await createClient();
@@ -33,50 +34,13 @@ export default async function CustomersPage() {
       </div>
 
       <div className="mt-8">
-       {customers?.length ? (
-  <div className="space-y-4">
-    {customers.map((customer) => (
-      <div
-        key={customer.id}
-        className="rounded-lg border p-4"
-      >
-        <p className="font-semibold">{customer.name}</p>
-
-        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <p>Phone: {customer.phone}</p>
-
-          {customer.email && (
-            <p>Email: {customer.email}</p>
-          )}
-
-          {customer.address && (
-            <p>Address: {customer.address}</p>
-          )}
-
-          <p>
-            Added:{" "}
-            {new Date(customer.created_at).toLocaleDateString()}
-          </p>
-
-            <Link
-    href={`/customers/${customer.id}/edit`}
-    className="mt-3 inline-block text-sm font-medium underline"
-    >
-    Edit
-    </Link>
-    <div className="mt-3">
-  <DeleteCustomerButton customerId={customer.id} />
-</div>
-
-        </div>
-      </div>
-    ))}
-  </div>
+ {customers?.length ? (
+  <CustomerList customers={customers} />
 ) : (
-          <p className="text-muted-foreground">
-            No customers yet.
-          </p>
-        )}
+  <p className="text-muted-foreground">
+    No customers yet.
+  </p>
+)}
       </div>
     </main>
   );
