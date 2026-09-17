@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Package } from "lucide-react";
 
@@ -247,7 +248,12 @@ export function ShipmentList({
                     >
                       <td className="px-5 py-4">
                         <p className="text-sm font-bold text-slate-900">
-                          {shipment.tracking_number}
+                        <Link
+  href={`/shipments/${shipment.id}`}
+  className="font-semibold text-slate-950 hover:text-blue-600"
+>
+  {shipment.tracking_number}
+</Link>
                         </p>
 
                         <p className="mt-1 text-[11px] text-slate-400">
@@ -322,7 +328,12 @@ export function ShipmentList({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">
-                        {shipment.tracking_number}
+                       <Link
+  href={`/shipments/${shipment.id}`}
+  className="font-semibold text-slate-950 hover:text-blue-600"
+>
+  {shipment.tracking_number}
+</Link>
                       </p>
 
                       <p className="mt-1 truncate text-xs text-slate-500">

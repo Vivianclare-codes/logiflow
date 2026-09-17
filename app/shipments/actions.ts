@@ -149,6 +149,20 @@ export async function createShipment(
     };
   }
 
+  const { error: eventError } = await supabase
+  .from("shipment_events")
+  .insert({
+    shipment_id: shipment.id,
+    status: "pending",
+    description: "Shipment created.",
+    created_by: user.id,
+  });
+
+if (eventError) {
+  console.error("Create shipment event error:", eventError);
+  return { error: eventError.message };
+}
+
   // -----------------------------------------
   // 6. Refresh relevant paths
   // -----------------------------------------
@@ -160,5 +174,68 @@ export async function createShipment(
     success: true,
     trackingNumber:
       shipment.tracking_number,
+  };
+}
+
+export async function updateShipmentStatus(
+  previousState: ShipmentActionState,
+  formData: FormData
+): Promise<ShipmentActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  const shipmentId = String(formData.get("shipment_id") ?? "").trim();
+  const newStatus = String(formData.get("new_status") ?? "").trim();
+  const scheduledPickup = String(
+    formData.get("scheduled_pickup") ?? ""
+  ).trim();
+
+  if (!shipmentId) {
+    return {
+      error: "Shipment ID is required.",
+    };
+  }
+
+  if (!newStatus) {
+    return {
+      error: "New shipment status is required.",
+    };
+  }
+
+  const { data, error } = await supabase.rpc(
+    "update_shipment_status",
+    {
+      p_shipment_id: shipmentId,
+      p_new_status: newStatus,
+      p_scheduled_pickup: scheduledPickup
+        ? new Date(scheduledPickup).toISOString()
+        : null,
+    }
+  );
+
+  if (error) {
+    console.error("Update shipment status error:", error);
+
+    return {
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/shipments");
+  revalidatePath(`/shipments/${shipmentId}`);
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    trackingNumber: data,
   };
 }
