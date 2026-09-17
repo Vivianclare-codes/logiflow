@@ -41,7 +41,7 @@ const metrics = [
 function Logo() {
   return (
     <Link
-      href="/dashboard"
+      href="/"
       className="flex items-center gap-2.5"
       aria-label="LogiFlow dashboard"
     >
