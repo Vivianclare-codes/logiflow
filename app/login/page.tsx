@@ -2,22 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Boxes, LockKeyhole, Mail } from "lucide-react";
-
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
+  ArrowRight,
+  CheckCircle2,
+  LockKeyhole,
+  Mail,
+  Route,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-2.5" aria-label="LogiFlow">
+      <span className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
+        <Route className="size-5" strokeWidth={2.5} />
+      </span>
+
+      <span className="text-lg font-bold tracking-tight text-slate-950">
+        LogiFlow
+      </span>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,71 +31,122 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    if (!email || !password) {
+      setError("Enter your work email and password to continue.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (loginError) {
+      setError(loginError.message);
+      setIsLoading(false);
       return;
     }
 
     router.push("/dashboard");
+    router.refresh();
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 px-4 py-10 sm:px-6">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(30,64,175,0.08),transparent_32%)]"
-      />
+    <main className="min-h-screen bg-white text-slate-950">
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col lg:grid lg:grid-cols-[0.95fr_1.05fr]">
+        {/* Left side - desktop only */}
+        <section className="relative hidden overflow-hidden border-r border-slate-200 bg-slate-50 px-10 py-12 lg:flex lg:flex-col lg:justify-between xl:px-16">
+          <div
+            aria-hidden="true"
+            className="absolute -left-28 -top-32 size-96 rounded-full bg-blue-100/70 blur-3xl"
+          />
 
-      <div className="relative flex w-full max-w-md flex-col items-center gap-6">
-        <div className="flex items-center gap-2.5 text-primary">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Boxes aria-hidden="true" />
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-40 -right-20 size-96 rounded-full bg-indigo-100/50 blur-3xl"
+          />
+
+          <div className="relative">
+            <Logo />
+
+            <div className="mt-24 max-w-md">
+              <p className="mb-5 text-sm font-semibold uppercase tracking-[0.16em] text-blue-600">
+                Operations, connected
+              </p>
+
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-[-0.05em] text-slate-950 xl:text-6xl">
+                Keep every delivery moving.
+              </h1>
+
+              <p className="mt-6 max-w-sm text-base leading-7 text-slate-600">
+                Manage shipments, coordinate drivers, and keep your entire
+                logistics operation moving from one focused workspace.
+              </p>
+            </div>
           </div>
-          <span className="text-xl font-semibold tracking-tight">
-            LogiFlow
-          </span>
-        </div>
 
-        <Card className="w-full border-border/70 bg-card/95 shadow-xl shadow-slate-950/5 backdrop-blur-sm">
-          <CardHeader className="gap-2 px-7 pt-7 sm:px-8 sm:pt-8">
-            <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <LockKeyhole aria-hidden="true" />
+          <div className="relative space-y-4 text-sm text-slate-600">
+            {[
+              "Shipments and deliveries in one place",
+              "Clear workspaces for every team",
+              "Built for dependable daily operations",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <CheckCircle2 className="size-4 shrink-0 text-blue-600" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Login section */}
+        <section className="flex min-h-screen flex-col justify-center px-5 py-10 sm:px-10 lg:min-h-0 lg:px-16 xl:px-24">
+          <div className="mx-auto w-full max-w-md">
+            {/* Mobile logo */}
+            <div className="mb-10 lg:hidden">
+              <Logo />
             </div>
 
-            <CardTitle className="text-2xl tracking-tight">
-              Sign in to LogiFlow
-            </CardTitle>
+            <div className="mb-8">
+              <div className="mb-6 flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <LockKeyhole className="size-5" />
+              </div>
 
-            <CardDescription>
-              Enter your staff credentials to access operations.
-            </CardDescription>
-          </CardHeader>
+              <h2 className="text-3xl font-bold tracking-[-0.035em] text-slate-950">
+                Welcome back
+              </h2>
 
-          <CardContent className="px-7 sm:px-8">
-            <form
-              onSubmit={handleLogin}
-              className="flex flex-col gap-5"
-            >
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Sign in to your LogiFlow workspace.
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="flex flex-col gap-5">
+              {/* Email */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Work email</Label>
+                <label
+                  htmlFor="email"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Work email
+                </label>
 
                 <div className="relative">
                   <Mail
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                   />
 
-                  <Input
+                  <input
                     id="email"
                     type="email"
                     autoComplete="email"
@@ -97,21 +154,28 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="pl-10"
+                    disabled={isLoading}
+                    className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-950 shadow-none outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                 </div>
               </div>
 
+              {/* Password */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Password</Label>
+                <label
+                  htmlFor="password"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Password
+                </label>
 
                 <div className="relative">
                   <LockKeyhole
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                   />
 
-                  <Input
+                  <input
                     id="password"
                     type="password"
                     autoComplete="current-password"
@@ -119,35 +183,46 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="pl-10"
+                    disabled={isLoading}
+                    className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-950 shadow-none outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
                 </div>
               </div>
 
+              {/* Error */}
               {error && (
-                <Alert variant="destructive" aria-live="polite">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+                >
+                  {error}
+                </div>
               )}
 
-              <Button type="submit" className="h-11 w-full">
-                Log in
-                <ArrowRight aria-hidden="true" data-icon="inline-end" />
-              </Button>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isLoading ? "Signing in..." : "Log in"}
+
+                {!isLoading && (
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-4"
+                  />
+                )}
+              </button>
             </form>
-          </CardContent>
 
-          <CardFooter className="justify-center px-7 pb-7 pt-1 sm:px-8 sm:pb-8">
-            <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              Authorized staff only. If you need access, contact your
-              LogiFlow administrator.
+            <p className="mt-8 border-t border-slate-200 pt-6 text-center text-xs leading-5 text-slate-500">
+              Authorized staff only. If you need access, contact your LogiFlow
+              administrator.
             </p>
-          </CardFooter>
-        </Card>
-
-        <p className="text-xs text-muted-foreground">
-          Operations management, connected.
-        </p>
+          </div>
+        </section>
       </div>
     </main>
   );
