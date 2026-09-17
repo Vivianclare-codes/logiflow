@@ -1,10 +1,18 @@
 import Link from "next/link";
-import { ArrowLeft, MapPin, Package, Route, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Package,
+  Route,
+  UserRound,
+} from "lucide-react";
 import { notFound } from "next/navigation";
-import { UpdateStatusForm } from "@/components/shipments/update-status-form";
 
 import { createClient } from "@/lib/supabase/server";
+
 import { MobileWorkspaceDrawer } from "@/components/layout/mobile-workspace-drawer";
+import { UpdateStatusForm } from "@/components/shipments/update-status-form";
+import { AssignResourcesForm } from "@/components/shipments/assign-resources-form";
 
 function formatEventTime(value: string) {
   return new Date(value).toLocaleString("en-NG", {
@@ -17,18 +25,25 @@ function formatStatus(status: string) {
   switch (status) {
     case "pending":
       return "Pending";
+
     case "pickup_scheduled":
       return "Pickup scheduled";
+
     case "picked_up":
       return "Picked up";
+
     case "in_transit":
       return "In transit";
+
     case "out_for_delivery":
       return "Out for delivery";
+
     case "delivered":
       return "Delivered";
+
     case "cancelled":
       return "Cancelled";
+
     default:
       return status;
   }
@@ -38,18 +53,25 @@ function statusClasses(status: string) {
   switch (status) {
     case "pending":
       return "bg-slate-100 text-slate-700";
+
     case "pickup_scheduled":
       return "bg-blue-50 text-blue-700";
+
     case "picked_up":
       return "bg-indigo-50 text-indigo-700";
+
     case "in_transit":
       return "bg-blue-50 text-blue-700";
+
     case "out_for_delivery":
       return "bg-amber-50 text-amber-700";
+
     case "delivered":
       return "bg-emerald-50 text-emerald-700";
+
     case "cancelled":
       return "bg-red-50 text-red-700";
+
     default:
       return "bg-slate-100 text-slate-700";
   }
@@ -74,6 +96,7 @@ export default async function ShipmentDetailPage({
 
   const supabase = await createClient();
 
+  // Get logged-in user
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -82,12 +105,14 @@ export default async function ShipmentDetailPage({
     notFound();
   }
 
+  // Get current user's profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, role")
     .eq("id", user.id)
     .single();
 
+  // Get shipment
   const { data: shipment, error } = await supabase
     .from("shipments")
     .select(`
@@ -95,6 +120,8 @@ export default async function ShipmentDetailPage({
       tracking_number,
       pickup_address,
       destination_address,
+      driver_id,
+      vehicle_id,
       status,
       delivery_fee,
       scheduled_pickup,
@@ -109,25 +136,59 @@ export default async function ShipmentDetailPage({
     .eq("id", id)
     .single();
 
-    const { data: events, error: eventsError } = await supabase
-  .from("shipment_events")
-  .select(`
-    id,
-    status,
-    description,
-    created_at
-  `)
-  .eq("shipment_id", id)
-  .order("created_at", { ascending: false });
-
-if (eventsError) {
-  console.error("Shipment events error:", eventsError);
-}
-
   if (error || !shipment) {
     notFound();
   }
 
+  // Get shipment history
+  const { data: events, error: eventsError } = await supabase
+    .from("shipment_events")
+    .select(`
+      id,
+      status,
+      description,
+      created_at
+    `)
+    .eq("shipment_id", id)
+    .order("created_at", { ascending: false });
+
+  if (eventsError) {
+    console.error("Shipment events error:", eventsError);
+  }
+
+  // Get currently assigned driver
+  const { data: assignedDriver } = shipment.driver_id
+    ? await supabase
+        .from("drivers")
+        .select("id, full_name, phone, status")
+        .eq("id", shipment.driver_id)
+        .single()
+    : { data: null };
+
+  // Get currently assigned vehicle
+  const { data: assignedVehicle } = shipment.vehicle_id
+    ? await supabase
+        .from("vehicles")
+        .select("id, plate_number, vehicle_type, status")
+        .eq("id", shipment.vehicle_id)
+        .single()
+    : { data: null };
+
+  // Get available drivers for assignment
+  const { data: availableDrivers } = await supabase
+    .from("drivers")
+    .select("id, full_name, phone, status")
+    .eq("status", "available")
+    .order("full_name", { ascending: true });
+
+  // Get available vehicles for assignment
+  const { data: availableVehicles } = await supabase
+    .from("vehicles")
+    .select("id, plate_number, vehicle_type, status")
+    .eq("status", "available")
+    .order("plate_number", { ascending: true });
+
+  // Normalize customer relationship
   const customer = Array.isArray(shipment.customer)
     ? shipment.customer[0] ?? null
     : shipment.customer;
@@ -144,8 +205,13 @@ if (eventsError) {
               </div>
 
               <div>
-                <p className="text-sm font-bold text-slate-950">LogiFlow</p>
-                <p className="text-[11px] text-slate-400">Operations</p>
+                <p className="text-sm font-bold text-slate-950">
+                  LogiFlow
+                </p>
+
+                <p className="text-[11px] text-slate-400">
+                  Operations
+                </p>
               </div>
             </Link>
           </div>
@@ -155,7 +221,10 @@ if (eventsError) {
               Workspace
             </p>
 
-            <nav className="space-y-1" aria-label="Staff navigation">
+            <nav
+              className="space-y-1"
+              aria-label="Staff navigation"
+            >
               <Link
                 href="/dashboard"
                 className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
@@ -217,7 +286,10 @@ if (eventsError) {
               <div className="flex items-center gap-3 lg:hidden">
                 <MobileWorkspaceDrawer activeHref="/shipments" />
 
-                <Link href="/dashboard" className="flex items-center gap-2">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-2"
+                >
                   <div className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                     <Route className="size-4" />
                   </div>
@@ -242,28 +314,10 @@ if (eventsError) {
             </div>
           </header>
 
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-  <div>
-    <h2 className="text-sm font-bold text-slate-950">
-      Shipment workflow
-    </h2>
-
-    <p className="mt-1 text-xs text-slate-400">
-     A driver and vehicle must be assigned before pickup.
-    </p>
-  </div>
-
-  <div className="mt-5">
-    <UpdateStatusForm
-      shipmentId={shipment.id}
-      currentStatus={shipment.status}
-    />
-  </div>
-</section>
-
           {/* Page */}
           <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <div className="mx-auto max-w-6xl">
+              {/* Back link */}
               <Link
                 href="/shipments"
                 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-950"
@@ -291,13 +345,36 @@ if (eventsError) {
 
                   <p className="mt-2 text-sm text-slate-500">
                     Created{" "}
-                    {new Date(shipment.created_at).toLocaleString("en-NG")}
+                    {new Date(shipment.created_at).toLocaleString(
+                      "en-NG"
+                    )}
                   </p>
                 </div>
               </div>
 
+              {/* Shipment Workflow */}
+              <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-950">
+                    Shipment workflow
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Track progress and move the shipment to its next
+                    valid stage.
+                  </p>
+                </div>
+
+                <div className="mt-5">
+                  <UpdateStatusForm
+                    shipmentId={shipment.id}
+                    currentStatus={shipment.status}
+                  />
+                </div>
+              </section>
+
               {/* Main Grid */}
-              <div className="mt-8 grid gap-6 lg:grid-cols-3">
+              <div className="mt-6 grid gap-6 lg:grid-cols-3">
                 {/* Customer */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -309,6 +386,7 @@ if (eventsError) {
                       <h2 className="text-sm font-bold text-slate-950">
                         Customer
                       </h2>
+
                       <p className="text-xs text-slate-400">
                         Shipment customer
                       </p>
@@ -320,6 +398,7 @@ if (eventsError) {
                       <p className="text-xs font-medium text-slate-400">
                         Name
                       </p>
+
                       <p className="mt-1 text-sm font-semibold text-slate-900">
                         {customer?.name ?? "—"}
                       </p>
@@ -329,6 +408,7 @@ if (eventsError) {
                       <p className="text-xs font-medium text-slate-400">
                         Phone
                       </p>
+
                       <p className="mt-1 text-sm text-slate-700">
                         {customer?.phone ?? "—"}
                       </p>
@@ -339,6 +419,7 @@ if (eventsError) {
                         <p className="text-xs font-medium text-slate-400">
                           Email
                         </p>
+
                         <p className="mt-1 break-all text-sm text-slate-700">
                           {customer.email}
                         </p>
@@ -358,6 +439,7 @@ if (eventsError) {
                       <h2 className="text-sm font-bold text-slate-950">
                         Delivery fee
                       </h2>
+
                       <p className="text-xs text-slate-400">
                         Current shipment charge
                       </p>
@@ -375,7 +457,7 @@ if (eventsError) {
                   </div>
                 </section>
 
-                {/* Assignment Placeholder */}
+                {/* Dispatch */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -386,22 +468,60 @@ if (eventsError) {
                       <h2 className="text-sm font-bold text-slate-950">
                         Dispatch
                       </h2>
+
                       <p className="text-xs text-slate-400">
-                        Assignment status
+                        Driver and vehicle assignment
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-6">
-                    <p className="text-sm font-semibold text-slate-900">
-                      Not assigned
-                    </p>
+                  {shipment.driver_id || shipment.vehicle_id ? (
+                    <div className="mt-6 space-y-5">
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">
+                          Driver
+                        </p>
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Driver and vehicle assignment will be added in the
-                      dispatch phase.
-                    </p>
-                  </div>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {assignedDriver?.full_name ?? "—"}
+                        </p>
+
+                        {assignedDriver?.phone && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {assignedDriver.phone}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">
+                          Vehicle
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {assignedVehicle?.plate_number ?? "—"}
+                        </p>
+
+                        {assignedVehicle?.vehicle_type && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {assignedVehicle.vehicle_type}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-6">
+                      <p className="mb-5 text-sm text-slate-500">
+                        This shipment has not been assigned yet.
+                      </p>
+
+                      <AssignResourcesForm
+                        shipmentId={shipment.id}
+                        drivers={availableDrivers ?? []}
+                        vehicles={availableVehicles ?? []}
+                      />
+                    </div>
+                  )}
                 </section>
 
                 {/* Route */}
@@ -415,6 +535,7 @@ if (eventsError) {
                       <h2 className="text-sm font-bold text-slate-950">
                         Shipment route
                       </h2>
+
                       <p className="text-xs text-slate-400">
                         Pickup and destination
                       </p>
@@ -447,68 +568,73 @@ if (eventsError) {
                 </section>
 
                 {/* Shipment History */}
-<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
-  <div>
-    <h2 className="text-sm font-bold text-slate-950">
-      Shipment history
-    </h2>
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-950">
+                      Shipment history
+                    </h2>
 
-    <p className="mt-1 text-xs text-slate-400">
-      Timeline of recorded shipment events
-    </p>
-  </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Timeline of recorded shipment events
+                    </p>
+                  </div>
 
-  <div className="mt-8">
-    {events && events.length > 0 ? (
-      <div className="relative">
-        <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+                  <div className="mt-8">
+                    {events && events.length > 0 ? (
+                      <div className="relative">
+                        <div className="absolute bottom-2 left-[7px] top-2 w-px bg-slate-200" />
 
-        <div className="space-y-7">
-          {events.map((event, index) => (
-            <div key={event.id} className="relative flex gap-4">
-              <div className="relative z-10 mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-white">
-                <div
-                  className={`size-2.5 rounded-full ${
-                    index === 0 ? "bg-blue-600" : "bg-slate-300"
-                  }`}
-                />
-              </div>
+                        <div className="space-y-7">
+                          {events.map((event, index) => (
+                            <div
+                              key={event.id}
+                              className="relative flex gap-4"
+                            >
+                              <div className="relative z-10 mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-white">
+                                <div
+                                  className={`size-2.5 rounded-full ${
+                                    index === 0
+                                      ? "bg-blue-600"
+                                      : "bg-slate-300"
+                                  }`}
+                                />
+                              </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {formatStatus(event.status)}
-                  </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {formatStatus(event.status)}
+                                  </p>
 
-                  <p className="text-xs text-slate-400">
-                    {formatEventTime(event.created_at)}
-                  </p>
-                </div>
+                                  <p className="text-xs text-slate-400">
+                                    {formatEventTime(event.created_at)}
+                                  </p>
+                                </div>
 
-                {event.description && (
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    {event.description}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ) : (
-      <div className="rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center">
-        <p className="text-sm font-medium text-slate-700">
-          No shipment history yet
-        </p>
+                                {event.description && (
+                                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                                    {event.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center">
+                        <p className="text-sm font-medium text-slate-700">
+                          No shipment history yet
+                        </p>
 
-        <p className="mt-1 text-xs text-slate-400">
-          Shipment events will appear here as the shipment moves through
-          its workflow.
-        </p>
-      </div>
-    )}
-  </div>
-</section>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Shipment events will appear here as the
+                          shipment moves through its workflow.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
 
                 {/* Scheduling */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
@@ -531,7 +657,7 @@ if (eventsError) {
                   </div>
                 </section>
 
-                {/* Record */}
+                {/* Shipment Record */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <h2 className="text-sm font-bold text-slate-950">
                     Shipment record
@@ -542,6 +668,7 @@ if (eventsError) {
                       <p className="text-xs font-medium text-slate-400">
                         Tracking number
                       </p>
+
                       <p className="mt-1 text-sm font-semibold text-slate-900">
                         {shipment.tracking_number}
                       </p>
@@ -551,6 +678,7 @@ if (eventsError) {
                       <p className="text-xs font-medium text-slate-400">
                         Status
                       </p>
+
                       <p className="mt-1 text-sm font-semibold text-slate-900">
                         {formatStatus(shipment.status)}
                       </p>
@@ -561,6 +689,7 @@ if (eventsError) {
             </div>
           </main>
 
+          {/* Footer */}
           <footer className="border-t border-slate-200 px-4 py-6 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-6xl">
               <p className="text-xs text-slate-400">
