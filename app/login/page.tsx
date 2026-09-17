@@ -9,6 +9,7 @@ import {
   Mail,
   Route,
 } from "lucide-react";
+
 import { supabase } from "@/lib/supabase/client";
 
 function Logo() {
@@ -33,19 +34,27 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     setError("");
 
     if (!email || !password) {
-      setError("Enter your work email and password to continue.");
+      setError(
+        "Enter your work email and password to continue."
+      );
       return;
     }
 
     setIsLoading(true);
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({
+    // 1. Authenticate the user
+    const {
+      data: { user },
+      error: loginError,
+    } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -56,7 +65,42 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // 2. Make sure we actually have an authenticated user
+    if (!user) {
+      setError("Unable to verify your account.");
+      setIsLoading(false);
+      return;
+    }
+
+    // 3. Get the user's role from their profile
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      setError("Unable to determine your account role.");
+      setIsLoading(false);
+      return;
+    }
+
+    // 4. Send the user to the correct workspace
+    if (profile.role === "driver") {
+      router.push("/driver/dashboard");
+    } else if (
+      profile.role === "admin" ||
+      profile.role === "dispatcher"
+    ) {
+      router.push("/dashboard");
+    } else {
+      setError(
+        "Your account does not have a valid LogiFlow role."
+      );
+      setIsLoading(false);
+      return;
+    }
+
     router.refresh();
   }
 
@@ -88,8 +132,9 @@ export default function LoginPage() {
               </h1>
 
               <p className="mt-6 max-w-sm text-base leading-7 text-slate-600">
-                Manage shipments, coordinate drivers, and keep your entire
-                logistics operation moving from one focused workspace.
+                Manage shipments, coordinate drivers, and keep your
+                entire logistics operation moving from one focused
+                workspace.
               </p>
             </div>
           </div>
@@ -130,7 +175,10 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-5">
+            <form
+              onSubmit={handleLogin}
+              className="flex flex-col gap-5"
+            >
               {/* Email */}
               <div className="flex flex-col gap-2">
                 <label
@@ -153,7 +201,9 @@ export default function LoginPage() {
                     placeholder="you@company.com"
                     required
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) =>
+                      setEmail(event.target.value)
+                    }
                     disabled={isLoading}
                     className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-950 shadow-none outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
@@ -182,7 +232,9 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     required
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) =>
+                      setPassword(event.target.value)
+                    }
                     disabled={isLoading}
                     className="h-12 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-base text-slate-950 shadow-none outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
@@ -218,8 +270,8 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-8 border-t border-slate-200 pt-6 text-center text-xs leading-5 text-slate-500">
-              Authorized staff only. If you need access, contact your LogiFlow
-              administrator.
+              Authorized staff only. If you need access, contact your
+              LogiFlow administrator.
             </p>
           </div>
         </section>

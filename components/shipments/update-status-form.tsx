@@ -170,13 +170,14 @@ export function UpdateStatusForm({
                   Pickup date and time
                 </label>
 
-                <input
-                  id="scheduled_pickup"
-                  name="scheduled_pickup"
-                  type="datetime-local"
-                  required
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+               <input
+  id="scheduled_pickup"
+  name="scheduled_pickup"
+  type="datetime-local"
+  required
+  className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+  style={{ colorScheme: "light" }}
+/>
               </div>
             )}
 

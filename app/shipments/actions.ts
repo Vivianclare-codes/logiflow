@@ -313,3 +313,78 @@ export async function assignShipmentResources(
     success: true,
   };
 }
+
+export async function completeShipmentDelivery(
+  previousState: ShipmentActionState,
+  formData: FormData
+): Promise<ShipmentActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  const shipmentId = String(
+    formData.get("shipment_id") ?? ""
+  ).trim();
+
+  const recipientName = String(
+    formData.get("recipient_name") ?? ""
+  ).trim();
+
+  const notes = String(
+    formData.get("notes") ?? ""
+  ).trim();
+
+  if (!shipmentId) {
+    return {
+      error: "Shipment ID is required.",
+    };
+  }
+
+  if (!recipientName) {
+    return {
+      error: "Recipient name is required.",
+    };
+  }
+
+  const { data, error } = await supabase.rpc(
+    "complete_shipment_delivery",
+    {
+      p_shipment_id: shipmentId,
+      p_recipient_name: recipientName,
+      p_notes: notes || null,
+      p_image_path: null,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Complete shipment delivery error:",
+      error
+    );
+
+    return {
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/shipments");
+  revalidatePath(`/shipments/${shipmentId}`);
+  revalidatePath("/driver/dashboard");
+  revalidatePath(`/driver/shipments/${shipmentId}`);
+  revalidatePath("/drivers");
+  revalidatePath("/vehicles");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    trackingNumber: data,
+  };
+}
