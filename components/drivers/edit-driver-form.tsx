@@ -19,17 +19,17 @@ type EditDriverFormProps = {
 export function EditDriverForm({
   driver,
 }: EditDriverFormProps) {
-  const [state, formAction, pending] = useActionState(
-    updateDriver,
-    {
-      error: undefined,
-      success: false,
-    }
-  );
+  const [state, formAction, pending] =
+    useActionState(
+      updateDriver,
+      {
+        error: undefined,
+        success: false,
+      }
+    );
 
-  const [fullName, setFullName] = useState(
-    driver.full_name
-  );
+  const [fullName, setFullName] =
+    useState(driver.full_name);
 
   const [phone, setPhone] = useState(
     driver.phone
@@ -42,7 +42,7 @@ export function EditDriverForm({
   return (
     <form
       action={formAction}
-      className="flex max-w-xl flex-col gap-5"
+      className="max-w-2xl space-y-5"
     >
       <input
         type="hidden"
@@ -50,40 +50,48 @@ export function EditDriverForm({
         value={driver.id}
       />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="full_name">
-          Driver name
-        </Label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="full_name">
+            Driver name
+          </Label>
 
-        <Input
-          id="full_name"
-          name="full_name"
-          value={fullName}
-          onChange={(event) =>
-            setFullName(event.target.value)
-          }
-          required
-        />
+          <Input
+            id="full_name"
+            name="full_name"
+            value={fullName}
+            onChange={(event) =>
+              setFullName(
+                event.target.value
+              )
+            }
+            className="h-10"
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="phone">
+            Phone number
+          </Label>
+
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={phone}
+            onChange={(event) =>
+              setPhone(
+                event.target.value
+              )
+            }
+            className="h-10"
+            required
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="phone">
-          Phone number
-        </Label>
-
-        <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          value={phone}
-          onChange={(event) =>
-            setPhone(event.target.value)
-          }
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
+      <div className="flex max-w-sm flex-col gap-2">
         <Label htmlFor="status">
           Status
         </Label>
@@ -95,7 +103,7 @@ export function EditDriverForm({
           onChange={(event) =>
             setStatus(event.target.value)
           }
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+          className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         >
           <option value="available">
             Available
@@ -125,10 +133,11 @@ export function EditDriverForm({
 
       <Button
         type="submit"
-        className="w-fit"
         disabled={pending}
       >
-        {pending ? "Saving..." : "Save changes"}
+        {pending
+          ? "Saving..."
+          : "Save changes"}
       </Button>
     </form>
   );

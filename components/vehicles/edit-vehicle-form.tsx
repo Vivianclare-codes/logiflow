@@ -1,24 +1,26 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { updateVehicle } from "@/app/vehicles/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type EditVehicleFormProps = {
-  vehicle: {
-    id: string;
-    plate_number: string;
-    vehicle_type: string;
-    status: string;
-  };
+type Vehicle = {
+  id: string;
+  plate_number: string;
+  vehicle_type: string;
+  status: string;
 };
 
 export function EditVehicleForm({
   vehicle,
-}: EditVehicleFormProps) {
+  onCancel,
+}: {
+  vehicle: Vehicle;
+  onCancel: () => void;
+}) {
   const [state, formAction, pending] = useActionState(
     updateVehicle,
     {
@@ -39,10 +41,16 @@ export function EditVehicleForm({
     vehicle.status
   );
 
+  useEffect(() => {
+    if (state.success) {
+      onCancel();
+    }
+  }, [state.success, onCancel]);
+
   return (
     <form
       action={formAction}
-      className="flex max-w-xl flex-col gap-5"
+      className="space-y-5 rounded-xl border border-blue-100 bg-blue-50/40 p-5"
     >
       <input
         type="hidden"
@@ -50,51 +58,63 @@ export function EditVehicleForm({
         value={vehicle.id}
       />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="plate_number">
-          Plate number
-        </Label>
+      <div>
+        <p className="text-sm font-bold text-slate-900">
+          Edit vehicle
+        </p>
 
-        <Input
-          id="plate_number"
-          name="plate_number"
-          value={plateNumber}
-          onChange={(event) =>
-            setPlateNumber(event.target.value)
-          }
-          required
-        />
+        <p className="mt-1 text-xs text-slate-500">
+          Update this vehicle's information.
+        </p>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`plate-${vehicle.id}`}>
+            Plate number
+          </Label>
+
+          <Input
+            id={`plate-${vehicle.id}`}
+            name="plate_number"
+            value={plateNumber}
+            onChange={(event) =>
+              setPlateNumber(event.target.value)
+            }
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`type-${vehicle.id}`}>
+            Vehicle type
+          </Label>
+
+          <Input
+            id={`type-${vehicle.id}`}
+            name="vehicle_type"
+            value={vehicleType}
+            onChange={(event) =>
+              setVehicleType(event.target.value)
+            }
+            required
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="vehicle_type">
-          Vehicle type
-        </Label>
-
-        <Input
-          id="vehicle_type"
-          name="vehicle_type"
-          value={vehicleType}
-          onChange={(event) =>
-            setVehicleType(event.target.value)
-          }
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="status">
+        <Label htmlFor={`status-${vehicle.id}`}>
           Status
         </Label>
 
         <select
-          id="status"
+          id={`status-${vehicle.id}`}
           name="status"
           value={status}
           onChange={(event) =>
             setStatus(event.target.value)
           }
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+          className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         >
           <option value="available">
             Available
@@ -108,26 +128,31 @@ export function EditVehicleForm({
             Maintenance
           </option>
         </select>
-        </div>
+      </div>
+
       {state.error && (
         <p className="text-sm text-destructive">
           {state.error}
         </p>
       )}
 
-      {state.success && (
-        <p className="text-sm text-green-600">
-          Vehicle updated successfully.
-        </p>
-      )}
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={pending}
+        >
+          {pending ? "Saving..." : "Save changes"}
+        </Button>
 
-      <Button
-        type="submit"
-        className="w-fit"
-        disabled={pending}
-      >
-        {pending ? "Saving..." : "Save changes"}
-      </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={pending}
+        >
+          Cancel
+        </Button>
+      </div>
     </form>
   );
 }

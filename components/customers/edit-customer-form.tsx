@@ -20,23 +20,35 @@ type EditCustomerFormProps = {
 export function EditCustomerForm({
   customer,
 }: EditCustomerFormProps) {
-  const [state, formAction, pending] = useActionState(
-    updateCustomer,
-    {
-      error: undefined,
-      success: false,
-    }
+  const [state, formAction, pending] =
+    useActionState(
+      updateCustomer,
+      {
+        error: undefined,
+        success: false,
+      }
+    );
+
+  const [name, setName] = useState(
+    customer.name
   );
 
-  const [name, setName] = useState(customer.name);
-  const [phone, setPhone] = useState(customer.phone);
-  const [email, setEmail] = useState(customer.email ?? "");
-  const [address, setAddress] = useState(customer.address ?? "");
+  const [phone, setPhone] = useState(
+    customer.phone
+  );
+
+  const [email, setEmail] = useState(
+    customer.email ?? ""
+  );
+
+  const [address, setAddress] = useState(
+    customer.address ?? ""
+  );
 
   return (
     <form
       action={formAction}
-      className="flex max-w-xl flex-col gap-5"
+      className="max-w-3xl space-y-5"
     >
       <input
         type="hidden"
@@ -44,47 +56,81 @@ export function EditCustomerForm({
         value={customer.id}
       />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Customer name</Label>
-        <Input
-          id="name"
-          name="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="name">
+            Customer name
+          </Label>
+
+          <Input
+            id="name"
+            name="name"
+            value={name}
+            onChange={(event) =>
+              setName(
+                event.target.value
+              )
+            }
+            className="h-10"
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="phone">
+            Phone number
+          </Label>
+
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            value={phone}
+            onChange={(event) =>
+              setPhone(
+                event.target.value
+              )
+            }
+            className="h-10"
+            required
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="phone">Phone number</Label>
-        <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-          required
-        />
-      </div>
+      <div className="flex max-w-md flex-col gap-2">
+        <Label htmlFor="email">
+          Email address
+        </Label>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email address</Label>
         <Input
           id="email"
           name="email"
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) =>
+            setEmail(
+              event.target.value
+            )
+          }
+          className="h-10"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="address">Address</Label>
+      <div className="flex max-w-2xl flex-col gap-2">
+        <Label htmlFor="address">
+          Address
+        </Label>
+
         <Input
           id="address"
           name="address"
           value={address}
-          onChange={(event) => setAddress(event.target.value)}
+          onChange={(event) =>
+            setAddress(
+              event.target.value
+            )
+          }
+          className="h-10"
         />
       </div>
 
@@ -102,10 +148,11 @@ export function EditCustomerForm({
 
       <Button
         type="submit"
-        className="w-fit"
         disabled={pending}
       >
-        {pending ? "Saving..." : "Save changes"}
+        {pending
+          ? "Saving..."
+          : "Save changes"}
       </Button>
     </form>
   );

@@ -8,47 +8,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function DriverForm() {
-  const [state, formAction, pending] = useActionState(
-    createDriver,
-    {
-      error: undefined,
-      success: false,
-    }
-  );
+  const [state, formAction, pending] =
+    useActionState(
+      createDriver,
+      {
+        error: undefined,
+        success: false,
+      }
+    );
 
   return (
     <form
       action={formAction}
-      className="flex max-w-xl flex-col gap-5"
+      className="max-w-2xl space-y-5"
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="full_name">
-          Driver name
-        </Label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="full_name">
+            Driver name
+          </Label>
 
-        <Input
-          id="full_name"
-          name="full_name"
-          placeholder="e.g. John Doe"
-          required
-        />
+          <Input
+            id="full_name"
+            name="full_name"
+            placeholder="e.g. John Doe"
+            className="h-10"
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="phone">
+            Phone number
+          </Label>
+
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            placeholder="e.g. 08012345678"
+            className="h-10"
+            required
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="phone">
-          Phone number
-        </Label>
-
-        <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          placeholder="e.g. 08012345678"
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
+      <div className="flex max-w-sm flex-col gap-2">
         <Label htmlFor="status">
           Status
         </Label>
@@ -57,7 +62,7 @@ export function DriverForm() {
           id="status"
           name="status"
           defaultValue="available"
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+          className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         >
           <option value="available">
             Available
@@ -87,10 +92,11 @@ export function DriverForm() {
 
       <Button
         type="submit"
-        className="w-fit"
         disabled={pending}
       >
-        {pending ? "Adding..." : "Add driver"}
+        {pending
+          ? "Adding..."
+          : "Add driver"}
       </Button>
     </form>
   );

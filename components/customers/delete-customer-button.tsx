@@ -10,22 +10,24 @@ export function DeleteCustomerButton({
 }: {
   customerId: string;
 }) {
-  const [state, formAction, pending] = useActionState(
-    deleteCustomer,
-    {
-      error: undefined,
-      success: false,
-    }
-  );
+  const [state, formAction, pending] =
+    useActionState(
+      deleteCustomer,
+      {
+        error: undefined,
+        success: false,
+      }
+    );
 
   return (
     <div>
       <form
         action={formAction}
         onSubmit={(event) => {
-          const confirmed = window.confirm(
-            "Are you sure you want to delete this customer?"
-          );
+          const confirmed =
+            window.confirm(
+              "Are you sure you want to delete this customer?"
+            );
 
           if (!confirmed) {
             event.preventDefault();
@@ -43,7 +45,9 @@ export function DeleteCustomerButton({
           variant="destructive"
           disabled={pending}
         >
-          {pending ? "Deleting..." : "Delete"}
+          {pending
+            ? "Deleting..."
+            : "Delete"}
         </Button>
       </form>
 
