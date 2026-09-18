@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -43,6 +44,11 @@ const navigation = [
     label: "Vehicles",
     href: "/vehicles",
     icon: Truck,
+  },
+    {
+    label: "Activity",
+    href: "/activity",
+    icon: Activity,
   },
 ];
 

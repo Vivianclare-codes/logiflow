@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MobileWorkspaceDrawer } from "@/components/layout/mobile-workspace-drawer";
 import { UpdateStatusForm } from "@/components/shipments/update-status-form";
 import { AssignResourcesForm } from "@/components/shipments/assign-resources-form";
+import { EditAssignmentForm } from "@/components/shipments/edit-assignment-form";
 import { RecordPaymentForm } from "@/components/shipments/record-payment-form";
 
 function formatEventTime(value: string) {
@@ -188,6 +189,24 @@ export default async function ShipmentDetailPage({
     .select("id, plate_number, vehicle_type, status")
     .eq("status", "available")
     .order("plate_number", { ascending: true });
+
+    const assignmentDrivers = Array.from(
+  new Map(
+    [
+      ...(availableDrivers ?? []),
+      ...(assignedDriver ? [assignedDriver] : []),
+    ].map((driver) => [driver.id, driver])
+  ).values()
+);
+
+const assignmentVehicles = Array.from(
+  new Map(
+    [
+      ...(availableVehicles ?? []),
+      ...(assignedVehicle ? [assignedVehicle] : []),
+    ].map((vehicle) => [vehicle.id, vehicle])
+  ).values()
+);
 
   // Normalize customer relationship
   const customer = Array.isArray(shipment.customer)
@@ -498,71 +517,102 @@ export default async function ShipmentDetailPage({
                 </section>
 
                 {/* Dispatch */}
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <Route className="size-5" />
-                    </div>
+                {/* Dispatch */}
+<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="flex items-center gap-3">
+    <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+      <Route className="size-5" />
+    </div>
 
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-950">
-                        Dispatch
-                      </h2>
+    <div>
+      <h2 className="text-sm font-bold text-slate-950">
+        Dispatch
+      </h2>
 
-                      <p className="text-xs text-slate-400">
-                        Driver and vehicle assignment
-                      </p>
-                    </div>
-                  </div>
+      <p className="text-xs text-slate-400">
+        Driver and vehicle assignment
+      </p>
+    </div>
+  </div>
 
-                  {shipment.driver_id || shipment.vehicle_id ? (
-                    <div className="mt-6 space-y-5">
-                      <div>
-                        <p className="text-xs font-medium text-slate-400">
-                          Driver
-                        </p>
+  {shipment.driver_id || shipment.vehicle_id ? (
+    <div className="mt-6">
+      <div className="space-y-5">
+        {/* Current driver */}
+        <div>
+          <p className="text-xs font-medium text-slate-400">
+            Driver
+          </p>
 
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {assignedDriver?.full_name ?? "—"}
-                        </p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">
+            {assignedDriver?.full_name ?? "—"}
+          </p>
 
-                        {assignedDriver?.phone && (
-                          <p className="mt-1 text-xs text-slate-500">
-                            {assignedDriver.phone}
-                          </p>
-                        )}
-                      </div>
+          {assignedDriver?.phone && (
+            <p className="mt-1 text-xs text-slate-500">
+              {assignedDriver.phone}
+            </p>
+          )}
+        </div>
 
-                      <div>
-                        <p className="text-xs font-medium text-slate-400">
-                          Vehicle
-                        </p>
+        {/* Current vehicle */}
+        <div>
+          <p className="text-xs font-medium text-slate-400">
+            Vehicle
+          </p>
 
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {assignedVehicle?.plate_number ?? "—"}
-                        </p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">
+            {assignedVehicle?.plate_number ?? "—"}
+          </p>
 
-                        {assignedVehicle?.vehicle_type && (
-                          <p className="mt-1 text-xs text-slate-500">
-                            {assignedVehicle.vehicle_type}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-6">
-                      <p className="mb-5 text-sm text-slate-500">
-                        This shipment has not been assigned yet.
-                      </p>
+          {assignedVehicle?.vehicle_type && (
+            <p className="mt-1 text-xs text-slate-500">
+              {assignedVehicle.vehicle_type}
+            </p>
+          )}
+        </div>
+      </div>
 
-                      <AssignResourcesForm
-                        shipmentId={shipment.id}
-                        drivers={availableDrivers ?? []}
-                        vehicles={availableVehicles ?? []}
-                      />
-                    </div>
-                  )}
-                </section>
+      {/* Edit assignment */}
+      {shipment.status !== "delivered" &&
+        shipment.status !== "cancelled" && (
+          <details className="mt-6 border-t border-slate-100 pt-5">
+            <summary className="cursor-pointer text-sm font-semibold text-blue-600 transition hover:text-blue-700">
+              Edit assignment
+            </summary>
+
+            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">
+                Use this when a driver or vehicle needs to be
+                replaced because of an emergency or an assignment
+                mistake.
+              </p>
+
+              <EditAssignmentForm
+                shipmentId={shipment.id}
+                currentDriverId={shipment.driver_id}
+                currentVehicleId={shipment.vehicle_id}
+                drivers={assignmentDrivers}
+                vehicles={assignmentVehicles}
+              />
+            </div>
+          </details>
+        )}
+    </div>
+  ) : (
+    <div className="mt-6">
+      <p className="mb-5 text-sm text-slate-500">
+        This shipment has not been assigned yet.
+      </p>
+
+      <AssignResourcesForm
+        shipmentId={shipment.id}
+        drivers={availableDrivers ?? []}
+        vehicles={availableVehicles ?? []}
+      />
+    </div>
+  )}
+</section>
 
                 {/* Route */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">

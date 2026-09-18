@@ -4,6 +4,25 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 
+async function logActivity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  action: string,
+  entityType: string,
+  entityId: string,
+  metadata: Record<string, unknown> = {}
+) {
+  const { error } = await supabase.rpc("log_activity", {
+    p_action: action,
+    p_entity_type: entityType,
+    p_entity_id: entityId,
+    p_metadata: metadata,
+  });
+
+  if (error) {
+    throw new Error(`Failed to log activity: ${error.message}`);
+  }
+}
+
 type ShipmentActionState = {
   error?: string;
   success?: boolean;
@@ -34,12 +53,11 @@ export async function createShipment(
   // 2. Check role
   // -----------------------------------------
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
   if (profileError || !profile) {
     return {
@@ -52,8 +70,7 @@ export async function createShipment(
     profile.role !== "dispatcher"
   ) {
     return {
-      error:
-        "You do not have permission to create shipments.",
+      error: "You do not have permission to create shipments.",
     };
   }
 
@@ -105,17 +122,14 @@ export async function createShipment(
     };
   }
 
-  const deliveryFee = Number(
-    deliveryFeeValue
-  );
+  const deliveryFee = Number(deliveryFeeValue);
 
   if (
     !Number.isFinite(deliveryFee) ||
     deliveryFee < 0
   ) {
     return {
-      error:
-        "Delivery fee must be a valid non-negative number.",
+      error: "Delivery fee must be a valid non-negative number.",
     };
   }
 
@@ -123,45 +137,59 @@ export async function createShipment(
   // 5. Create shipment
   // -----------------------------------------
 
-  const { data: shipment, error } =
-    await supabase
-      .from("shipments")
-      .insert({
-        customer_id: customerId,
-        pickup_address: pickupAddress,
-        destination_address:
-          destinationAddress,
-        delivery_fee: deliveryFee,
-        status: "pending",
-        created_by: user.id,
-      })
-      .select("id, tracking_number")
-      .single();
+  const { data: shipment, error } = await supabase
+    .from("shipments")
+    .insert({
+      customer_id: customerId,
+      pickup_address: pickupAddress,
+      destination_address: destinationAddress,
+      delivery_fee: deliveryFee,
+      status: "pending",
+      created_by: user.id,
+    })
+    .select("id, tracking_number")
+    .single();
 
   if (error) {
-    console.error(
-      "Create shipment error:",
-      error
-    );
+    console.error("Create shipment error:", error);
 
     return {
       error: error.message,
     };
   }
 
+  // Create initial shipment event
   const { error: eventError } = await supabase
-  .from("shipment_events")
-  .insert({
-    shipment_id: shipment.id,
-    status: "pending",
-    description: "Shipment created.",
-    created_by: user.id,
-  });
+    .from("shipment_events")
+    .insert({
+      shipment_id: shipment.id,
+      status: "pending",
+      description: "Shipment created.",
+      created_by: user.id,
+    });
 
-if (eventError) {
-  console.error("Create shipment event error:", eventError);
-  return { error: eventError.message };
-}
+  if (eventError) {
+    console.error(
+      "Create shipment event error:",
+      eventError
+    );
+
+    return {
+      error: eventError.message,
+    };
+  }
+
+  // Create activity log
+  await logActivity(
+    supabase,
+    "shipment_created",
+    "shipment",
+    shipment.id,
+    {
+      tracking_number: shipment.tracking_number,
+      status: "pending",
+    }
+  );
 
   // -----------------------------------------
   // 6. Refresh relevant paths
@@ -172,8 +200,7 @@ if (eventError) {
 
   return {
     success: true,
-    trackingNumber:
-      shipment.tracking_number,
+    trackingNumber: shipment.tracking_number,
   };
 }
 
@@ -193,8 +220,14 @@ export async function updateShipmentStatus(
     };
   }
 
-  const shipmentId = String(formData.get("shipment_id") ?? "").trim();
-  const newStatus = String(formData.get("new_status") ?? "").trim();
+  const shipmentId = String(
+    formData.get("shipment_id") ?? ""
+  ).trim();
+
+  const newStatus = String(
+    formData.get("new_status") ?? ""
+  ).trim();
+
   const scheduledPickup = String(
     formData.get("scheduled_pickup") ?? ""
   ).trim();
@@ -223,7 +256,10 @@ export async function updateShipmentStatus(
   );
 
   if (error) {
-    console.error("Update shipment status error:", error);
+    console.error(
+      "Update shipment status error:",
+      error
+    );
 
     return {
       error: error.message,
@@ -296,7 +332,10 @@ export async function assignShipmentResources(
   );
 
   if (error) {
-    console.error("Assign shipment resources error:", error);
+    console.error(
+      "Assign shipment resources error:",
+      error
+    );
 
     return {
       error: error.message,
@@ -308,6 +347,84 @@ export async function assignShipmentResources(
   revalidatePath("/drivers");
   revalidatePath("/vehicles");
   revalidatePath("/dashboard");
+
+  return {
+    success: true,
+  };
+}
+
+export async function updateShipmentAssignment(
+  previousState: ShipmentActionState,
+  formData: FormData
+): Promise<ShipmentActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  const shipmentId = String(
+    formData.get("shipment_id") ?? ""
+  ).trim();
+
+  const driverId = String(
+    formData.get("driver_id") ?? ""
+  ).trim();
+
+  const vehicleId = String(
+    formData.get("vehicle_id") ?? ""
+  ).trim();
+
+  if (!shipmentId) {
+    return {
+      error: "Shipment ID is required.",
+    };
+  }
+
+  if (!driverId) {
+    return {
+      error: "Please select a driver.",
+    };
+  }
+
+  if (!vehicleId) {
+    return {
+      error: "Please select a vehicle.",
+    };
+  }
+
+  const { error } = await supabase.rpc(
+    "update_shipment_assignment",
+    {
+      p_shipment_id: shipmentId,
+      p_driver_id: driverId,
+      p_vehicle_id: vehicleId,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Update shipment assignment error:",
+      error
+    );
+
+    return {
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/shipments");
+  revalidatePath(`/shipments/${shipmentId}`);
+  revalidatePath("/drivers");
+  revalidatePath("/vehicles");
+  revalidatePath("/dashboard");
+  revalidatePath("/driver/dashboard");
 
   return {
     success: true,
