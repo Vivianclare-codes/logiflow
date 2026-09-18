@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MobileWorkspaceDrawer } from "@/components/layout/mobile-workspace-drawer";
 import { UpdateStatusForm } from "@/components/shipments/update-status-form";
 import { AssignResourcesForm } from "@/components/shipments/assign-resources-form";
+import { RecordPaymentForm } from "@/components/shipments/record-payment-form";
 
 function formatEventTime(value: string) {
   return new Date(value).toLocaleString("en-NG", {
@@ -193,13 +194,52 @@ export default async function ShipmentDetailPage({
     ? shipment.customer[0] ?? null
     : shipment.customer;
 
+  // Get payments
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, amount, paid_at")
+    .eq("shipment_id", shipment.id)
+    .order("paid_at", { ascending: false });
+
+  if (paymentsError) {
+    console.error("Shipment payments error:", paymentsError);
+  }
+
+  // Calculate payment totals
+  const deliveryFee = Number(shipment.delivery_fee);
+
+  const totalPaid = (payments ?? []).reduce(
+    (total, payment) => total + Number(payment.amount),
+    0
+  );
+
+  const balance = deliveryFee - totalPaid;
+
+  // Calculate payment status
+  const paymentStatus =
+    totalPaid === 0
+      ? "Unpaid"
+      : balance <= 0
+        ? "Paid"
+        : "Partially paid";
+
+  const paymentStatusClasses =
+    totalPaid === 0
+      ? "bg-slate-100 text-slate-700"
+      : balance <= 0
+        ? "bg-emerald-50 text-emerald-700"
+        : "bg-amber-50 text-amber-700";
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex min-h-screen">
         {/* Desktop Sidebar */}
         <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
           <div className="border-b border-slate-100 px-6 py-6">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3"
+            >
               <div className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white">
                 <Route className="size-5" />
               </div>
@@ -452,7 +492,7 @@ export default async function ShipmentDetailPage({
                     </p>
 
                     <p className="mt-2 text-sm text-slate-500">
-                      Payment tracking will be added later.
+                      Payment records are shown below.
                     </p>
                   </div>
                 </section>
@@ -633,6 +673,138 @@ export default async function ShipmentDetailPage({
                         </p>
                       </div>
                     )}
+                  </div>
+                </section>
+
+                {/* Payments */}
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-950">
+                      Payments
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Manual payment records for this shipment
+                    </p>
+                  </div>
+
+                  <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                    {/* Payment Summary */}
+                    <div>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Delivery Fee */}
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-xs font-medium text-slate-400">
+                            Delivery fee
+                          </p>
+
+                          <p className="mt-2 text-lg font-bold text-slate-950">
+                            ₦{deliveryFee.toLocaleString("en-NG")}
+                          </p>
+                        </div>
+
+                        {/* Paid */}
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-xs font-medium text-slate-400">
+                            Paid
+                          </p>
+
+                          <p className="mt-2 text-lg font-bold text-slate-950">
+                            ₦{totalPaid.toLocaleString("en-NG")}
+                          </p>
+                        </div>
+
+                        {/* Balance */}
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-xs font-medium text-slate-400">
+                            Balance
+                          </p>
+
+                          <p className="mt-2 text-lg font-bold text-slate-950">
+                            ₦{balance.toLocaleString("en-NG")}
+                          </p>
+                        </div>
+
+                        {/* Payment Status */}
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-xs font-medium text-slate-400">
+                            Payment status
+                          </p>
+
+                          <span
+                            className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${paymentStatusClasses}`}
+                          >
+                            {paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Payment History */}
+                      {payments && payments.length > 0 ? (
+                        <div className="mt-6">
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                            Payment history
+                          </p>
+
+                          <div className="mt-3 space-y-3">
+                            {payments.map((payment) => (
+                              <div
+                                key={payment.id}
+                                className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3"
+                              >
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    ₦
+                                    {Number(
+                                      payment.amount
+                                    ).toLocaleString("en-NG")}
+                                  </p>
+
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    {new Date(
+                                      payment.paid_at
+                                    ).toLocaleString("en-NG")}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-6 rounded-xl border border-dashed border-slate-200 px-5 py-6">
+                          <p className="text-sm font-medium text-slate-700">
+                            No payments recorded yet.
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            Payment records will appear here after they
+                            are added.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Record Payment */}
+                    <div className="rounded-xl border border-slate-200 p-5">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                        Record payment
+                      </p>
+
+                      {balance > 0 ? (
+                        <div className="mt-5">
+                          <RecordPaymentForm
+                            shipmentId={shipment.id}
+                            balance={balance}
+                          />
+                        </div>
+                      ) : (
+                        <div className="mt-5 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
+                          <p className="text-sm font-semibold text-emerald-700">
+                            This shipment is fully paid.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </section>
 

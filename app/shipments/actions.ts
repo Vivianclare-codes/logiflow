@@ -388,3 +388,76 @@ export async function completeShipmentDelivery(
     trackingNumber: data,
   };
 }
+
+export async function recordShipmentPayment(
+  previousState: ShipmentActionState,
+  formData: FormData
+): Promise<ShipmentActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  const shipmentId = String(
+    formData.get("shipment_id") ?? ""
+  ).trim();
+
+  const amountValue = String(
+    formData.get("amount") ?? ""
+  ).trim();
+
+  if (!shipmentId) {
+    return {
+      error: "Shipment ID is required.",
+    };
+  }
+
+  if (!amountValue) {
+    return {
+      error: "Payment amount is required.",
+    };
+  }
+
+  const amount = Number(amountValue);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return {
+      error: "Payment amount must be greater than zero.",
+    };
+  }
+
+  const { data: newBalance, error } = await supabase.rpc(
+    "record_shipment_payment",
+    {
+      p_shipment_id: shipmentId,
+      p_amount: amount,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Record shipment payment error:",
+      error
+    );
+
+    return {
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/shipments");
+  revalidatePath(`/shipments/${shipmentId}`);
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    trackingNumber: String(newBalance),
+  };
+}
