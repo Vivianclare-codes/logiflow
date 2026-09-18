@@ -1,12 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import {
   Activity,
   Bell,
+  CheckCircle2,
   ChevronRight,
+  CircleDollarSign,
   CircleHelp,
   Clock3,
   Command,
@@ -14,28 +12,47 @@ import {
   LogOut,
   Package,
   Route,
-  Settings,
   Truck,
   UserRound,
   Users,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
+import { getDashboardData } from "@/app/dashboard/data";
 import { MobileWorkspaceDrawer } from "@/components/layout/mobile-workspace-drawer";
 
 const navigation = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Shipments", href: "/shipments", icon: Package },
-  { label: "Customers", href: "/customers", icon: Users },
-  { label: "Drivers", href: "/drivers", icon: UserRound },
-  { label: "Vehicles", href: "/vehicles", icon: Truck },
-];
-
-const metrics = [
-  { label: "Total shipments", icon: Package },
-  { label: "Pending", icon: Clock3 },
-  { label: "In transit", icon: Route },
-  { label: "Today's deliveries", icon: Truck },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Shipments",
+    href: "/shipments",
+    icon: Package,
+  },
+  {
+    label: "Customers",
+    href: "/customers",
+    icon: Users,
+  },
+  {
+    label: "Drivers",
+    href: "/drivers",
+    icon: UserRound,
+  },
+  {
+    label: "Vehicles",
+    href: "/vehicles",
+    icon: Truck,
+  },
+  {
+    label: "Activity",
+    href: "/activity",
+    icon: Activity,
+  },
 ];
 
 function Logo() {
@@ -46,7 +63,10 @@ function Logo() {
       aria-label="LogiFlow dashboard"
     >
       <span className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
-        <Route className="size-5" strokeWidth={2.5} />
+        <Route
+          className="size-5"
+          strokeWidth={2.5}
+        />
       </span>
 
       <span className="text-[17px] font-bold tracking-tight text-slate-950">
@@ -56,99 +76,306 @@ function Logo() {
   );
 }
 
-function Navigation({ pathname }: { pathname: string }) {
+function Navigation() {
   return (
-    <nav className="space-y-1" aria-label="Staff navigation">
-      {navigation.map(({ label, href, icon: Icon }) => {
-        const isActive = href === pathname;
+    <nav
+      className="space-y-1"
+      aria-label="Staff navigation"
+    >
+      {navigation.map(
+        ({ label, href, icon: Icon }) => {
+          const isActive = href === "/dashboard";
 
-        return (
-          <Link
-            key={label}
-            href={href}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${
-              isActive
-                ? "bg-blue-50 text-blue-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-            }`}
-          >
-            <Icon
-              className={`size-[18px] ${
-                isActive ? "text-blue-600" : "text-slate-400"
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${
+                isActive
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
               }`}
-            />
+            >
+              <Icon
+                className={`size-[18px] ${
+                  isActive
+                    ? "text-blue-600"
+                    : "text-slate-400"
+                }`}
+              />
 
-            {label}
-          </Link>
-        );
-      })}
+              {label}
+            </Link>
+          );
+        }
+      )}
     </nav>
   );
 }
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const pathname = usePathname();
+function formatStatus(status: string) {
+  switch (status) {
+    case "pending":
+      return "Pending";
 
-  const [fullName, setFullName] = useState("Account user");
-  const [role, setRole] = useState("Administrator");
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+    case "pickup_scheduled":
+      return "Pickup scheduled";
 
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    case "picked_up":
+      return "Picked up";
 
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+    case "in_transit":
+      return "In transit";
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, role")
-        .eq("id", user.id)
-        .single();
+    case "out_for_delivery":
+      return "Out for delivery";
 
-      if (profile) {
-        if (profile.full_name) {
-          setFullName(profile.full_name);
-        }
+    case "delivered":
+      return "Delivered";
 
-        if (profile.role) {
-          setRole(
-            profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
-          );
-        }
-      }
+    case "cancelled":
+      return "Cancelled";
+
+    default:
+      return status;
+  }
+}
+
+function statusClasses(status: string) {
+  switch (status) {
+    case "pending":
+      return "bg-slate-100 text-slate-700";
+
+    case "pickup_scheduled":
+      return "bg-blue-50 text-blue-700";
+
+    case "picked_up":
+      return "bg-indigo-50 text-indigo-700";
+
+    case "in_transit":
+      return "bg-blue-50 text-blue-700";
+
+    case "out_for_delivery":
+      return "bg-amber-50 text-amber-700";
+
+    case "delivered":
+      return "bg-emerald-50 text-emerald-700";
+
+    case "cancelled":
+      return "bg-red-50 text-red-700";
+
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
+
+function formatActivityAction(action: string) {
+  switch (action) {
+    case "shipment_created":
+      return "Shipment created";
+
+    case "driver_assigned":
+      return "Driver assigned";
+
+    case "vehicle_assigned":
+      return "Vehicle assigned";
+
+    case "driver_reassigned":
+      return "Driver reassigned";
+
+    case "vehicle_reassigned":
+      return "Vehicle reassigned";
+
+    case "status_changed":
+      return "Shipment status changed";
+
+    case "payment_recorded":
+      return "Payment recorded";
+
+    case "delivery_completed":
+      return "Delivery completed";
+
+    default:
+      return action;
+  }
+}
+
+function activityIcon(action: string) {
+  switch (action) {
+    case "shipment_created":
+      return Package;
+
+    case "driver_assigned":
+    case "driver_reassigned":
+      return UserRound;
+
+    case "vehicle_assigned":
+    case "vehicle_reassigned":
+      return Truck;
+
+    case "payment_recorded":
+      return CircleDollarSign;
+
+    case "delivery_completed":
+      return CheckCircle2;
+
+    case "status_changed":
+      return Route;
+
+    default:
+      return Activity;
+  }
+}
+
+function activityIconClasses(action: string) {
+  switch (action) {
+    case "shipment_created":
+      return "bg-blue-50 text-blue-600";
+
+    case "driver_assigned":
+    case "driver_reassigned":
+      return "bg-violet-50 text-violet-600";
+
+    case "vehicle_assigned":
+    case "vehicle_reassigned":
+      return "bg-slate-100 text-slate-600";
+
+    case "payment_recorded":
+    case "delivery_completed":
+      return "bg-emerald-50 text-emerald-600";
+
+    case "status_changed":
+      return "bg-amber-50 text-amber-600";
+
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
+function formatEventTime(value: string) {
+  return new Date(value).toLocaleString(
+    "en-NG",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
     }
+  );
+}
 
-    loadProfile();
-  }, [router]);
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatRoutePart(address: string) {
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts[parts.length - 1] ?? address;
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  // -----------------------------------------
+  // Authentication
+  // -----------------------------------------
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // -----------------------------------------
+  // Current profile
+  // -----------------------------------------
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .single();
+
+  if (
+    !profile ||
+    (profile.role !== "admin" &&
+      profile.role !== "dispatcher")
+  ) {
+    redirect("/login");
+  }
+
+  // -----------------------------------------
+  // Real dashboard data
+  // -----------------------------------------
+
+  const dashboardData =
+    await getDashboardData();
 
   async function handleLogout() {
-    setIsLoggingOut(true);
+    "use server";
 
-    const { error } = await supabase.auth.signOut();
+    const supabase = await createClient();
 
-    if (error) {
-      console.error("Logout error:", error);
-      setIsLoggingOut(false);
-      return;
-    }
+    await supabase.auth.signOut();
 
-    router.push("/login");
-    router.refresh();
+    redirect("/login");
   }
+
+  const fullName =
+    profile.full_name ?? "Account user";
+
+  const role =
+    profile.role === "admin"
+      ? "Administrator"
+      : "Dispatcher";
 
   const initials = fullName
     .split(" ")
     .filter(Boolean)
-    .map((name) => name[0])
+    .map((name: any[]) => name[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const metrics = [
+    {
+      label: "Total shipments",
+      value: dashboardData.totalShipments,
+      icon: Package,
+      helper: "All shipments",
+    },
+    {
+      label: "Pending",
+      value: dashboardData.pendingShipments,
+      icon: Clock3,
+      helper: "Awaiting next step",
+    },
+    {
+      label: "In transit",
+      value: dashboardData.inTransitShipments,
+      icon: Route,
+      helper: "Currently moving",
+    },
+    {
+      label: "Today's deliveries",
+      value: dashboardData.todaysDeliveries,
+      icon: Truck,
+      helper: "Completed today",
+    },
+  ];
+
+  const fleetAvailability =
+    dashboardData.totalVehicles > 0
+      ? `${dashboardData.availableVehicles}/${dashboardData.totalVehicles}`
+      : "0/0";
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -161,7 +388,7 @@ export default function DashboardPage() {
             Workspace
           </p>
 
-          <Navigation pathname={pathname} />
+          <Navigation />
         </div>
 
         <div className="mt-auto space-y-1 border-t border-slate-100 pt-5">
@@ -170,7 +397,7 @@ export default function DashboardPage() {
             disabled
             className="flex min-h-11 w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-400"
           >
-            <Settings className="size-[18px] text-slate-300" />
+            <SettingsIcon />
             Settings
           </button>
 
@@ -184,18 +411,20 @@ export default function DashboardPage() {
                 {fullName}
               </p>
 
-              <p className="text-[11px] text-slate-500">{role}</p>
+              <p className="text-[11px] text-slate-500">
+                {role}
+              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Log out"
-            >
-              <LogOut className="size-4" />
-            </button>
+            <form action={handleLogout}>
+              <button
+                type="submit"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white hover:text-slate-700"
+                aria-label="Log out"
+              >
+                <LogOut className="size-4" />
+              </button>
+            </form>
           </div>
         </div>
       </aside>
@@ -228,6 +457,7 @@ export default function DashboardPage() {
               disabled
             >
               <Bell className="size-[18px]" />
+
               <span className="absolute right-2.5 top-2 size-1.5 rounded-full bg-blue-600" />
             </button>
 
@@ -258,51 +488,57 @@ export default function DashboardPage() {
               </h1>
 
               <p className="mt-3 text-sm leading-6 text-slate-500">
-                A clear view of what&apos;s moving, waiting, and needs
-                attention.
+                A clear view of what&apos;s moving,
+                waiting, and needs attention.
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled
-              className="inline-flex h-10 cursor-not-allowed items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-400 shadow-sm sm:self-auto"
-            >
-              <Clock3 className="size-4 text-slate-300" />
+            <div className="inline-flex h-10 items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-500 shadow-sm sm:self-auto">
+              <Clock3 className="size-4 text-slate-400" />
               Today
-              <ChevronRight className="size-3.5 text-slate-300" />
-            </button>
+            </div>
           </section>
 
+          {/* Metrics */}
           <section
             className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
             aria-label="Shipment metrics"
           >
-            {metrics.map(({ label, icon: Icon }) => (
-              <div
-                key={label}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-slate-500">
-                    {label}
+            {metrics.map(
+              ({
+                label,
+                value,
+                icon: Icon,
+                helper,
+              }) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-slate-500">
+                      {label}
+                    </p>
+
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                      <Icon className="size-4" />
+                    </span>
+                  </div>
+
+                  <p className="mt-5 text-3xl font-bold tracking-tight text-slate-900">
+                    {value.toLocaleString("en-NG")}
                   </p>
 
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
-                    <Icon className="size-4" />
-                  </span>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {helper}
+                  </p>
                 </div>
-
-                <p className="mt-5 text-3xl font-bold tracking-tight text-slate-900">
-                  —
-                </p>
-
-                <p className="mt-1 text-[11px] text-slate-400">No data yet</p>
-              </div>
-            ))}
+              )
+            )}
           </section>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]">
+            {/* Recent shipments */}
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
                 <div>
@@ -330,62 +566,273 @@ export default function DashboardPage() {
                       <th className="px-5 py-3 font-bold sm:px-6">
                         Shipment
                       </th>
-                      <th className="px-5 py-3 font-bold">Route</th>
-                      <th className="px-5 py-3 font-bold">Status</th>
+
+                      <th className="px-5 py-3 font-bold">
+                        Route
+                      </th>
+
+                      <th className="px-5 py-3 font-bold">
+                        Status
+                      </th>
                     </tr>
                   </thead>
 
-                  <tbody>
-                    <tr>
-                      <td colSpan={3} className="px-5 py-12 text-center sm:px-6">
-                        <div className="mx-auto flex max-w-sm flex-col items-center">
-                          <span className="flex size-11 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-                            <Package className="size-5" />
-                          </span>
+                  <tbody className="divide-y divide-slate-100">
+                    {dashboardData.recentShipments.length >
+                    0 ? (
+                      dashboardData.recentShipments.map(
+                        (shipment) => (
+                          <tr
+                            key={shipment.id}
+                            className="transition hover:bg-slate-50/70"
+                          >
+                            <td className="px-5 py-4 sm:px-6">
+                              <Link
+                                href={`/shipments/${shipment.id}`}
+                                className="group"
+                              >
+                                <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600">
+                                  {shipment.trackingNumber}
+                                </p>
 
-                          <p className="mt-4 text-sm font-semibold text-slate-700">
-                            No shipments yet
-                          </p>
+                                <p className="mt-1 max-w-[180px] truncate text-xs text-slate-400">
+                                  {shipment.customerName}
+                                </p>
+                              </Link>
+                            </td>
 
-                          <p className="mt-1 text-xs leading-5 text-slate-400">
-                            Your latest shipments will appear here once
-                            shipment management is connected.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
+                            <td className="px-5 py-4 text-xs text-slate-500">
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {formatRoutePart(
+                                    shipment.pickupAddress
+                                  )}
+                                </span>
+
+                                <ChevronRight className="size-3 text-slate-300" />
+
+                                <span>
+                                  {formatRoutePart(
+                                    shipment.destinationAddress
+                                  )}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${statusClasses(
+                                  shipment.status
+                                )}`}
+                              >
+                                {formatStatus(
+                                  shipment.status
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      )
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-5 py-12 text-center sm:px-6"
+                        >
+                          <div className="mx-auto flex max-w-sm flex-col items-center">
+                            <span className="flex size-11 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                              <Package className="size-5" />
+                            </span>
+
+                            <p className="mt-4 text-sm font-semibold text-slate-700">
+                              No shipments yet
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-slate-400">
+                              Create your first shipment
+                              and it will appear here.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </section>
 
+            {/* Recent activity */}
             <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-sm font-bold text-slate-900">
-                  Recent activity
-                </h2>
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Recent activity
+                  </h2>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Updates from your team and fleet.
-                </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Updates from your team and fleet.
+                  </p>
+                </div>
+
+                <Link
+                  href="/activity"
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                >
+                  View all
+                </Link>
               </div>
 
-              <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center">
-                <span className="flex size-11 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-                  <Activity className="size-5" />
-                </span>
+              {dashboardData.recentActivity.length >
+              0 ? (
+                <div className="divide-y divide-slate-100">
+                  {dashboardData.recentActivity.map(
+                    (activity) => {
+                      const Icon = activityIcon(
+                        activity.action
+                      );
 
-                <p className="mt-4 text-sm font-semibold text-slate-700">
-                  No activity yet
-                </p>
+                      const iconClasses =
+                        activityIconClasses(
+                          activity.action
+                        );
 
-                <p className="mt-1 max-w-[220px] text-xs leading-5 text-slate-400">
-                  Team updates and shipment events will appear here.
-                </p>
-              </div>
+                      const metadata =
+                        activity.metadata;
+
+                      const trackingNumber =
+                        typeof metadata.tracking_number ===
+                        "string"
+                          ? metadata.tracking_number
+                          : null;
+
+                      const amount =
+                        typeof metadata.amount ===
+                          "number" ||
+                        typeof metadata.amount ===
+                          "string"
+                          ? Number(metadata.amount)
+                          : null;
+
+                      const previousStatus =
+                        typeof metadata.previous_status ===
+                        "string"
+                          ? metadata.previous_status
+                          : null;
+
+                      const newStatus =
+                        typeof metadata.new_status ===
+                        "string"
+                          ? metadata.new_status
+                          : null;
+
+                      return (
+                        <div
+                          key={activity.id}
+                          className="px-5 py-4"
+                        >
+                          <div className="flex gap-3">
+                            <div
+                              className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClasses}`}
+                            >
+                              <Icon className="size-4" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-xs font-bold text-slate-800">
+                                  {formatActivityAction(
+                                    activity.action
+                                  )}
+                                </p>
+
+                                {trackingNumber && (
+                                  <Link
+                                    href={`/shipments/${activity.entityId}`}
+                                    className="shrink-0 text-[10px] font-bold text-blue-600 hover:text-blue-700"
+                                  >
+                                    {trackingNumber}
+                                  </Link>
+                                )}
+                              </div>
+
+                              <p className="mt-1 text-[11px] text-slate-400">
+                                {activity.actor
+                                  ?.fullName ??
+                                  "Staff"}{" "}
+                                ·{" "}
+                                {formatEventTime(
+                                  activity.createdAt
+                                )}
+                              </p>
+
+                              {activity.action ===
+                                "status_changed" &&
+                                previousStatus &&
+                                newStatus && (
+                                  <p className="mt-2 text-[11px] text-slate-500">
+                                    {formatStatus(
+                                      previousStatus
+                                    )}{" "}
+                                    →{" "}
+                                    {formatStatus(
+                                      newStatus
+                                    )}
+                                  </p>
+                                )}
+
+                              {activity.action ===
+                                "payment_recorded" &&
+                                amount !== null && (
+                                  <p className="mt-2 text-[11px] text-slate-500">
+                                    {formatCurrency(
+                                      amount
+                                    )}{" "}
+                                    recorded.
+                                  </p>
+                                )}
+
+                              {activity.action ===
+                                "shipment_created" && (
+                                  <p className="mt-2 text-[11px] text-slate-500">
+                                    New shipment added
+                                    to the operation.
+                                  </p>
+                                )}
+
+                              {activity.action ===
+                                "delivery_completed" && (
+                                  <p className="mt-2 text-[11px] text-slate-500">
+                                    Delivery completed
+                                    successfully.
+                                  </p>
+                                )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              ) : (
+                <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center">
+                  <span className="flex size-11 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                    <Activity className="size-5" />
+                  </span>
+
+                  <p className="mt-4 text-sm font-semibold text-slate-700">
+                    No activity yet
+                  </p>
+
+                  <p className="mt-1 max-w-[220px] text-xs leading-5 text-slate-400">
+                    Team updates and shipment events
+                    will appear here.
+                  </p>
+                </div>
+              )}
             </section>
           </div>
 
+          {/* Operational overview */}
           <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -394,7 +841,8 @@ export default function DashboardPage() {
                 </h2>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  A quick view of workload across your logistics network.
+                  A quick view of workload across your
+                  logistics network.
                 </p>
               </div>
 
@@ -402,25 +850,58 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-dashed border-slate-200 p-4">
+              <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-xs font-semibold text-slate-500">
-                  Pending pickup
+                  Completed shipments
                 </p>
-                <p className="mt-4 text-xl font-bold text-slate-300">—</p>
+
+                <p className="mt-4 text-xl font-bold text-slate-900">
+                  {dashboardData.completedShipments.toLocaleString(
+                    "en-NG"
+                  )}
+                </p>
               </div>
 
-              <div className="rounded-lg border border-dashed border-slate-200 p-4">
+              <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-xs font-semibold text-slate-500">
                   Active drivers
                 </p>
-                <p className="mt-4 text-xl font-bold text-slate-300">—</p>
+
+                <p className="mt-4 text-xl font-bold text-slate-900">
+                  {dashboardData.activeDrivers.toLocaleString(
+                    "en-NG"
+                  )}
+                </p>
               </div>
 
-              <div className="rounded-lg border border-dashed border-slate-200 p-4">
+              <div className="rounded-lg border border-slate-200 p-4">
                 <p className="text-xs font-semibold text-slate-500">
                   Fleet availability
                 </p>
-                <p className="mt-4 text-xl font-bold text-slate-300">—</p>
+
+                <p className="mt-4 text-xl font-bold text-slate-900">
+                  {fleetAvailability}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">
+                    Outstanding payments
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Total unpaid balance across shipments
+                  </p>
+                </div>
+
+                <p className="text-lg font-bold text-slate-900">
+                  {formatCurrency(
+                    dashboardData.outstandingPayments
+                  )}
+                </p>
               </div>
             </div>
           </section>
@@ -431,10 +912,30 @@ export default function DashboardPage() {
               LogiFlow operations workspace
             </p>
 
-            <p>Data connects to your workspace as features are built.</p>
+            <p>
+              Live operational data from your workspace.
+            </p>
           </footer>
         </div>
       </div>
     </main>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-[18px] text-slate-300"
+      aria-hidden="true"
+    >
+      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.42 1.42-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V19.6h-2v-.08A1.7 1.7 0 0 0 12.38 18a1.7 1.7 0 0 0-1.88.34l-.06.06-1.42-1.42.06-.06A1.7 1.7 0 0 0 9.42 15a1.7 1.7 0 0 0-1.56-1.03H7.6v-2h.26A1.7 1.7 0 0 0 9.42 11a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.42-1.42.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 13.4 6.48V6.4h2v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.42 1.42-.06.06A1.7 1.7 0 0 0 19.4 11c.17.63.75 1.03 1.4 1.03h.2v2h-.2A1.7 1.7 0 0 0 19.4 15Z" />
+    </svg>
   );
 }
