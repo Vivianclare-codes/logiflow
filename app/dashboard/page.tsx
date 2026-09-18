@@ -53,6 +53,12 @@ const navigation = [
     href: "/activity",
     icon: Activity,
   },
+
+  {
+    label: "Staff",
+    href: "/staff",
+    icon: Users,
+  },
 ];
 
 function Logo() {
