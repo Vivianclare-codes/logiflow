@@ -2,30 +2,39 @@ import { redirect } from "next/navigation";
 import {
   ArrowRight,
   Clock3,
+  LogOut,
   MapPin,
   Package,
   Route,
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+
 import { createClient } from "@/lib/supabase/server";
 
 function formatStatus(status: string) {
   switch (status) {
     case "pending":
       return "Pending";
+
     case "pickup_scheduled":
       return "Pickup scheduled";
+
     case "picked_up":
       return "Picked up";
+
     case "in_transit":
       return "In transit";
+
     case "out_for_delivery":
       return "Out for delivery";
+
     case "delivered":
       return "Delivered";
+
     case "cancelled":
       return "Cancelled";
+
     default:
       return status;
   }
@@ -70,7 +79,10 @@ function formatDate(value: string) {
 export default async function DriverDashboardPage() {
   const supabase = await createClient();
 
+  // --------------------------------------------------
   // 1. Get logged-in user
+  // --------------------------------------------------
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -79,19 +91,28 @@ export default async function DriverDashboardPage() {
     redirect("/login");
   }
 
+  // --------------------------------------------------
   // 2. Get the user's profile
+  // --------------------------------------------------
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, role")
     .eq("id", user.id)
     .single();
 
+  // --------------------------------------------------
   // 3. Make sure this is actually a driver
+  // --------------------------------------------------
+
   if (!profile || profile.role !== "driver") {
     redirect("/dashboard");
   }
 
+  // --------------------------------------------------
   // 4. Find the driver record connected to this profile
+  // --------------------------------------------------
+
   const { data: driver, error: driverError } = await supabase
     .from("drivers")
     .select("id, full_name, status")
@@ -102,7 +123,10 @@ export default async function DriverDashboardPage() {
     redirect("/login");
   }
 
+  // --------------------------------------------------
   // 5. Get shipments assigned to this driver
+  // --------------------------------------------------
+
   const { data: shipments, error: shipmentsError } = await supabase
     .from("shipments")
     .select(`
@@ -126,7 +150,10 @@ export default async function DriverDashboardPage() {
 
   const driverShipments = shipments ?? [];
 
+  // --------------------------------------------------
   // 6. Calculate real dashboard metrics
+  // --------------------------------------------------
+
   const activeShipments = driverShipments.filter(
     (shipment) =>
       !["delivered", "cancelled"].includes(shipment.status)
@@ -144,11 +171,16 @@ export default async function DriverDashboardPage() {
     (shipment) => shipment.status === "delivered"
   ).length;
 
+  // --------------------------------------------------
+  // 7. Render
+  // --------------------------------------------------
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {/* Header */}
-        <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <header className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          {/* Brand + welcome */}
           <div>
             <div className="flex items-center gap-2">
               <div className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white">
@@ -169,26 +201,51 @@ export default async function DriverDashboardPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <span
-              className={`size-2.5 rounded-full ${
-                driver.status === "available"
-                  ? "bg-emerald-500"
-                  : driver.status === "busy"
-                    ? "bg-amber-500"
-                    : "bg-slate-400"
-              }`}
-            />
+          {/* Header actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Driver status */}
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <span
+                className={`size-2.5 rounded-full ${
+                  driver.status === "available"
+                    ? "bg-emerald-500"
+                    : driver.status === "busy"
+                      ? "bg-amber-500"
+                      : "bg-slate-400"
+                }`}
+              />
 
-            <div>
-              <p className="text-xs font-medium text-slate-400">
-                Driver status
-              </p>
+              <div>
+                <p className="text-xs font-medium text-slate-400">
+                  Driver status
+                </p>
 
-              <p className="text-sm font-semibold capitalize text-slate-900">
-                {driver.status.replaceAll("_", " ")}
-              </p>
+                <p className="text-sm font-semibold capitalize text-slate-900">
+                  {driver.status.replaceAll("_", " ")}
+                </p>
+              </div>
             </div>
+
+            {/* Log out */}
+            <form
+              action={async () => {
+                "use server";
+
+                const supabase = await createClient();
+
+                await supabase.auth.signOut();
+
+                redirect("/login");
+              }}
+            >
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-950"
+              >
+                <LogOut className="size-4" />
+                <span>Log out</span>
+              </button>
+            </form>
           </div>
         </header>
 
@@ -320,14 +377,15 @@ export default async function DriverDashboardPage() {
                       >
                         <td className="px-6 py-5">
                           <Link
-  href={`/driver/shipments/${shipment.id}`}
-  className="text-sm font-bold text-slate-950 transition hover:text-blue-600"
->
-  {shipment.tracking_number}
-</Link>
+                            href={`/driver/shipments/${shipment.id}`}
+                            className="text-sm font-bold text-slate-950 transition hover:text-blue-600"
+                          >
+                            {shipment.tracking_number}
+                          </Link>
 
                           <p className="mt-1 text-xs text-slate-400">
-                            Created {formatDate(shipment.created_at)}
+                            Created{" "}
+                            {formatDate(shipment.created_at)}
                           </p>
                         </td>
 
@@ -386,7 +444,8 @@ export default async function DriverDashboardPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
-                          Created {formatDate(shipment.created_at)}
+                          Created{" "}
+                          {formatDate(shipment.created_at)}
                         </p>
                       </div>
 
@@ -435,13 +494,13 @@ export default async function DriverDashboardPage() {
                       </div>
                     </div>
 
-                  <Link
-  href={`/driver/shipments/${shipment.id}`}
-  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-600"
->
-  View shipment
-  <ArrowRight className="size-4" />
-</Link>
+                    <Link
+                      href={`/driver/shipments/${shipment.id}`}
+                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-600"
+                    >
+                      View shipment
+                      <ArrowRight className="size-4" />
+                    </Link>
                   </div>
                 ))}
               </div>
