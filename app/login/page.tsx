@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -26,6 +27,27 @@ function Logo() {
   );
 }
 
+const demoAccounts = [
+  {
+    role: "Admin Demo",
+    name: "Ada Okafor",
+    email: "demo.admin@logiflow.test",
+    password: "logiflow123",
+  },
+  {
+    role: "Dispatcher Demo",
+    name: "Amaka Nwosu",
+    email: "demo1.dispatcher@logiflow.test",
+    password: "logiflow123",
+  },
+  {
+    role: "Driver Demo",
+    name: "Tunde Balogun",
+    email: "demo.driver2@logiflow.test",
+    password: "logiflow123",
+  },
+];
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -33,6 +55,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  function selectDemoAccount(
+    demoEmail: string,
+    demoPassword: string
+  ) {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setError("");
+  }
 
   async function handleLogin(
     event: React.FormEvent<HTMLFormElement>
@@ -269,9 +300,57 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="mt-8 border-t border-slate-200 pt-6 text-center text-xs leading-5 text-slate-500">
-              Authorized staff only. If you need access, contact your
-              LogiFlow administrator.
+            {/* Demo access */}
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-900">
+                  Exploring LogiFlow?
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Use a demo account to explore the different
+                  workspaces.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {demoAccounts.map((demo) => (
+                  <button
+                    key={demo.email}
+                    type="button"
+                    onClick={() =>
+                      selectDemoAccount(
+                        demo.email,
+                        demo.password
+                      )
+                    }
+                    disabled={isLoading}
+                    className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/50 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {demo.role}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {demo.name}
+                      </p>
+                    </div>
+
+                    <ArrowRight className="size-4 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-4 text-center text-[11px] leading-5 text-slate-400">
+                Demo accounts use sample data and are intended for
+                portfolio exploration.
+              </p>
+            </div>
+
+            <p className="mt-6 text-center text-xs leading-5 text-slate-500">
+              Staff accounts are protected. Demo accounts are provided
+              separately for portfolio exploration.
             </p>
           </div>
         </section>

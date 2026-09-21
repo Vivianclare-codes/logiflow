@@ -207,12 +207,13 @@ export default function HomePage() {
               place.
             </p>
 
+            {/* Hero actions */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
-                Get Started
+                Explore the Demo
                 <ArrowRight className="ml-2 size-4" />
               </Link>
 
@@ -461,7 +462,7 @@ export default function HomePage() {
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               >
-                Get Started
+                Explore the Demo
                 <ArrowRight className="ml-2 size-4" />
               </Link>
 
