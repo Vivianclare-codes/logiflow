@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ArrowLeft, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, LockKeyhole, UserPlus, Users } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -10,60 +10,6 @@ import CreateStaffForm from "@/components/staff/create-staff-form";
 import StaffTableRow from "@/components/staff/staff-table-row";
 import StaffMobileCard from "@/components/staff/staff-mobile-card";
 import { MobileWorkspaceDrawer } from "@/components/layout/mobile-workspace-drawer";
-
-function formatRole(role: string) {
-  switch (role) {
-    case "admin":
-      return "Administrator";
-
-    case "dispatcher":
-      return "Dispatcher";
-
-    case "driver":
-      return "Driver";
-
-    default:
-      return role;
-  }
-}
-
-function roleClasses(role: string) {
-  switch (role) {
-    case "admin":
-      return "bg-purple-50 text-purple-700 ring-purple-200";
-
-    case "dispatcher":
-      return "bg-blue-50 text-blue-700 ring-blue-200";
-
-    case "driver":
-      return "bg-amber-50 text-amber-700 ring-amber-200";
-
-    default:
-      return "bg-slate-50 text-slate-600 ring-slate-200";
-  }
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-  }).format(new Date(date));
-}
-
-function formatDriverStatus(status: string | undefined) {
-  switch (status) {
-    case "available":
-      return "Available";
-
-    case "busy":
-      return "Busy";
-
-    case "off_duty":
-      return "Off duty";
-
-    default:
-      return "No driver record";
-  }
-}
 
 function Logo() {
   return (
@@ -135,6 +81,102 @@ function Navigation() {
   );
 }
 
+function AccessDenied({
+  role,
+}: {
+  role: string;
+}) {
+  const roleName =
+    role === "dispatcher"
+      ? "Dispatchers"
+      : role === "driver"
+        ? "Drivers"
+        : "Your role";
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white px-5 py-6 lg:flex lg:flex-col">
+        <Logo />
+
+        <div className="mt-8 flex-1">
+          <Navigation />
+        </div>
+      </aside>
+
+      {/* Main workspace */}
+      <div className="lg:pl-64">
+        {/* Header */}
+        <header className="flex h-[72px] items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8 lg:px-10">
+          {/* Mobile header */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <MobileWorkspaceDrawer activeHref="/staff" />
+            <Logo />
+          </div>
+
+          {/* Desktop header */}
+          <div className="hidden lg:block">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Workspace / Staff
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Staff account management
+            </p>
+          </div>
+
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+            L
+          </div>
+        </header>
+
+        {/* Access denied content */}
+        <div className="flex min-h-[calc(100vh-72px)] items-center justify-center px-5 py-10 sm:px-8 lg:px-10">
+          <div className="w-full max-w-lg">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10">
+              {/* Icon */}
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <LockKeyhole className="h-6 w-6" />
+              </div>
+
+              {/* Heading */}
+              <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-950">
+                Staff management is restricted
+              </h1>
+
+              {/* Message */}
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+                {roleName} don&apos;t have permission to manage
+                staff accounts. This area is restricted to
+                administrators.
+              </p>
+
+              {/* Current role */}
+              <div className="mx-auto mt-6 inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                Current role:{" "}
+                <span className="ml-1 capitalize text-slate-900">
+                  {role}
+                </span>
+              </div>
+
+              {/* Action */}
+              <div className="mt-8">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default async function StaffPage() {
   const supabase = await createClient();
 
@@ -151,7 +193,7 @@ export default async function StaffPage() {
   }
 
   // --------------------------------------------------
-  // 2. Verify the current user is an active admin
+  // 2. Get current user's profile
   // --------------------------------------------------
 
   const { data: profile, error: profileError } = await supabase
@@ -160,9 +202,13 @@ export default async function StaffPage() {
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile || profile.role !== "admin") {
+  if (profileError || !profile) {
     redirect("/dashboard");
   }
+
+  // --------------------------------------------------
+  // 3. Check account status
+  // --------------------------------------------------
 
   if (!profile.is_active) {
     await supabase.auth.signOut();
@@ -170,7 +216,15 @@ export default async function StaffPage() {
   }
 
   // --------------------------------------------------
-  // 3. Fetch staff profiles and driver records
+  // 4. Staff management is admin-only
+  // --------------------------------------------------
+
+  if (profile.role !== "admin") {
+    return <AccessDenied role={profile.role} />;
+  }
+
+  // --------------------------------------------------
+  // 5. Fetch staff profiles and driver records
   // --------------------------------------------------
 
   const [
@@ -196,7 +250,7 @@ export default async function StaffPage() {
   }
 
   // --------------------------------------------------
-  // 4. Fetch Auth users so we can display email addresses
+  // 6. Fetch Auth users so we can display email addresses
   // --------------------------------------------------
 
   const {
@@ -212,7 +266,7 @@ export default async function StaffPage() {
   }
 
   // --------------------------------------------------
-  // 5. Build lookup maps
+  // 7. Build lookup maps
   // --------------------------------------------------
 
   const emailByUserId = new Map(
@@ -237,7 +291,7 @@ export default async function StaffPage() {
   const staffMembers = profiles ?? [];
 
   // --------------------------------------------------
-  // 6. Render
+  // 8. Render admin staff page
   // --------------------------------------------------
 
   return (
