@@ -31,8 +31,7 @@ const features = [
   },
   {
     title: "Vehicles",
-    description:
-      "Keep track of your fleet and its availability.",
+    description: "Keep track of your fleet and its availability.",
     icon: Truck,
     tone: "cyan",
   },
@@ -226,13 +225,21 @@ export default async function HomePage() {
               place.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            {/* Hero actions */}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
                 Get Started
                 <ArrowRight className="ml-2 size-4" />
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                Explore the Demo
               </Link>
 
               <Link
@@ -317,7 +324,7 @@ export default async function HomePage() {
                 ))}
               </div>
 
-              {/* Preview activity */}
+              {/* Preview workflow */}
               <div className="p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -499,13 +506,20 @@ export default async function HomePage() {
               one system.
             </p>
 
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               >
                 Get Started
                 <ArrowRight className="ml-2 size-4" />
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-lg border border-slate-700 px-5 text-sm font-semibold text-white transition hover:border-slate-500 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              >
+                Explore the Demo
               </Link>
 
               <Link
