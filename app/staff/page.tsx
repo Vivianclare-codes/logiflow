@@ -71,7 +71,7 @@ function Logo() {
       href="/"
       className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950"
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white">
         L
       </div>
 
@@ -123,8 +123,8 @@ function Navigation() {
             href={item.href}
             className={`flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               isActive
-                ? "bg-slate-900 text-white"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                ? "bg-blue-600 text-white"
+                : "text-slate-600 hover:bg-blue-50 hover:text-slate-950"
             }`}
           >
             {item.label}
@@ -253,10 +253,10 @@ export default async function StaffPage() {
         {/* Current user */}
         <div className="border-t border-slate-100 pt-5">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
               {profile.full_name
                 ?.split(" ")
-                .map((name: string[]) => name[0])
+                .map((name: string) => name[0])
                 .join("")
                 .slice(0, 2)
                 .toUpperCase() ?? "AD"}
@@ -327,10 +327,10 @@ export default async function StaffPage() {
               </p>
             </div>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
               {profile.full_name
                 ?.split(" ")
-                .map((name: any[]) => name[0])
+                .map((name: string) => name[0])
                 .join("")
                 .slice(0, 2)
                 .toUpperCase() ?? "AD"}
@@ -345,14 +345,14 @@ export default async function StaffPage() {
             <div>
               <Link
                 href="/dashboard"
-                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-blue-600"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to dashboard
               </Link>
 
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
                   <Users className="h-5 w-5" />
                 </div>
 
@@ -370,7 +370,7 @@ export default async function StaffPage() {
 
             <Link
               href="#create-staff"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
             >
               <UserPlus className="h-4 w-4" />
               Add staff
@@ -393,7 +393,7 @@ export default async function StaffPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
                     {staffMembers.length}{" "}
                     {staffMembers.length === 1
                       ? "member"
