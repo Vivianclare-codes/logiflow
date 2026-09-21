@@ -578,3 +578,59 @@ export async function recordShipmentPayment(
     trackingNumber: String(newBalance),
   };
 }
+
+export async function unassignShipmentResources(
+  previousState: ShipmentActionState,
+  formData: FormData
+): Promise<ShipmentActionState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  const shipmentId = String(
+    formData.get("shipment_id") ?? ""
+  ).trim();
+
+  if (!shipmentId) {
+    return {
+      error: "Shipment ID is required.",
+    };
+  }
+
+  const { error } = await supabase.rpc(
+    "unassign_shipment_resources",
+    {
+      p_shipment_id: shipmentId,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Unassign shipment resources error:",
+      error
+    );
+
+    return {
+      error: error.message,
+    };
+  }
+
+  revalidatePath("/shipments");
+  revalidatePath(`/shipments/${shipmentId}`);
+  revalidatePath("/drivers");
+  revalidatePath("/vehicles");
+  revalidatePath("/dashboard");
+  revalidatePath("/driver/dashboard");
+
+  return {
+    success: true,
+  };
+}
