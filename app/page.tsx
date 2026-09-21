@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+
 import {
   ArrowRight,
   CheckCircle2,
@@ -84,7 +86,24 @@ function Logo() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+
+  const { data: stats, error: statsError } = await supabase.rpc(
+    "get_public_dashboard_stats"
+  );
+
+  if (statsError) {
+    console.error("Landing page stats error:", statsError);
+  }
+
+  const dashboardStats = stats?.[0] ?? {
+    active_shipments: 0,
+    in_transit: 0,
+    delivered: 0,
+    pending_pickup: 0,
+  };
+
   return (
     <main className="min-h-screen overflow-hidden bg-white text-slate-950">
       {/* Header */}
@@ -207,13 +226,12 @@ export default function HomePage() {
               place.
             </p>
 
-            {/* Hero actions */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
-                Explore the Demo
+                Get Started
                 <ArrowRight className="ml-2 size-4" />
               </Link>
 
@@ -256,18 +274,30 @@ export default function HomePage() {
                 </div>
 
                 <span className="text-[10px] font-medium text-slate-400">
-                  Product preview
+                  Live preview
                 </span>
               </div>
 
-              {/* Preview metrics */}
+              {/* Real preview metrics */}
               <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 sm:grid-cols-4 sm:p-5">
                 {[
-                  "Active shipments",
-                  "In transit",
-                  "Delivered today",
-                  "Pending pickup",
-                ].map((label) => (
+                  {
+                    label: "Active shipments",
+                    value: dashboardStats.active_shipments,
+                  },
+                  {
+                    label: "In transit",
+                    value: dashboardStats.in_transit,
+                  },
+                  {
+                    label: "Delivered",
+                    value: dashboardStats.delivered,
+                  },
+                  {
+                    label: "Pending pickup",
+                    value: dashboardStats.pending_pickup,
+                  },
+                ].map(({ label, value }) => (
                   <div
                     key={label}
                     className="rounded-xl border border-slate-200 bg-white p-3"
@@ -276,12 +306,12 @@ export default function HomePage() {
                       {label}
                     </p>
 
-                    <p className="mt-2 text-xl font-bold tracking-tight text-slate-300">
-                      —
+                    <p className="mt-2 text-xl font-bold tracking-tight text-slate-950">
+                      {value}
                     </p>
 
                     <p className="mt-1 text-[9px] text-slate-400">
-                      Connected to your data
+                      Live from LogiFlow
                     </p>
                   </div>
                 ))}
@@ -307,10 +337,22 @@ export default function HomePage() {
 
                 <div className="space-y-2">
                   {[
-                    ["Shipment created", "Customer and delivery details"],
-                    ["Driver assigned", "Driver + vehicle connected"],
-                    ["In transit", "Shipment progress updated"],
-                    ["Delivered", "Proof of delivery recorded"],
+                    [
+                      "Shipment created",
+                      "Customer and delivery details",
+                    ],
+                    [
+                      "Driver assigned",
+                      "Driver + vehicle connected",
+                    ],
+                    [
+                      "In transit",
+                      "Shipment progress updated",
+                    ],
+                    [
+                      "Delivered",
+                      "Proof of delivery recorded",
+                    ],
                   ].map(([title, description], index) => (
                     <div
                       key={title}
@@ -462,7 +504,7 @@ export default function HomePage() {
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               >
-                Explore the Demo
+                Get Started
                 <ArrowRight className="ml-2 size-4" />
               </Link>
 

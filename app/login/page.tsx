@@ -44,7 +44,7 @@ const demoAccounts = [
     role: "Driver Demo",
     name: "Tunde Balogun",
     email: "demo.driver2@logiflow.test",
-    password: "logiflow123",
+    password: "logiflow123.",
   },
 ];
 
